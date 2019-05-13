@@ -1,6 +1,6 @@
 # TENet 
 ### Trinity of Pixel Enhancement: a Joint Solution for Demosaicing, Denoising and Super-Resolution
-By Guocheng Qian, [Jinjin Gu](http://www.jasongt.com/), [Jimmy S. Ren](http://www.jimmyren.com/), [Chao Dong](https://scholar.google.com.hk/citations?user=OSDCB0UAAAAJ&hl=en), Furong Zhao, Juan lin
+By [Guocheng Qian](https://guochengqian.github.io/), [Jinjin Gu](http://www.jasongt.com/), [Jimmy S. Ren](http://www.jimmyren.com/), [Chao Dong](https://scholar.google.com.hk/citations?user=OSDCB0UAAAAJ&hl=en), Furong Zhao, Juan lin
 
 
 ### Dependencies
@@ -64,12 +64,8 @@ By Guocheng Qian, [Jinjin Gu](http://www.jasongt.com/), [Jimmy S. Ren](http://ww
 1. Train code
     
     ```
-        sh scripy\run_tri2-deno.sh
+    sh scripy\run_tri2-deno.sh
     ```
-    
-### Datasets location
-
-    /mnt/lustre/DATAshare2/qianguocheng/senseSR/TENet_datasets
     
 ### Pretrained models location
     /mnt/lustre/DATAshare2/qianguocheng/senseSR/TENet_datasets/pretrained_models
