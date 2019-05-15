@@ -23,13 +23,13 @@ By [Guocheng Qian](https://guochengqian.github.io/), [Jinjin Gu](http://www.jaso
         ```
         python -u test.py --pretrained_model checkpoints/pretrained_models/tri2-dn-df2kx6-6-6-64-2-rrdb_checkpoint_1490.0k.path\
             --model tenet2 --block_type rrdb --sr_n_resblocks 6 --dm_n_resblocks 6 --scale 2 --bias --channels 64 \
-            --datatype uint8 --crop_scale 1 --img_type raw  --denoise --sigma 10 --test_path $YourInputPath --save_path $YourSavePath  
+            --crop_scale 1 --denoise --sigma 10 --test_path $YourInputPath --save_path $YourSavePath  
         ```   
    2. Model trained by PixelShift200 datasets
         ```
         python -u test.py --pretrained_model checkpoints/pretrained_models/tri2-dn-matx6-6-6-64-2-rrdb_checkpoint_2500.0k.path\
             --model tenet2 --block_type rrdb --sr_n_resblocks 6 --dm_n_resblocks 6 --scale 2 --bias --channels 64 \
-            --datatype uint8 --crop_scale 4 --img_type raw  --denoise --sigma 5 --test_path $YourInputPath --save_path $YourSavePath  
+            --crop_scale 4 --denoise --sigma 5 --test_path $YourInputPath --save_path $YourSavePath  
         ```
    if Run out of CUDA memory, just set --crop_scale 2 (or higher)           
 4. Run ablation study code:
