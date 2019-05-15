@@ -2,8 +2,8 @@ import os
 import torch
 from PIL import Image
 import numpy as np 
-from libtiff import TIFF
-import pdb
+# from libtiff import TIFF
+# import pdb
 import cv2
 
 
@@ -45,7 +45,7 @@ def _all_images(path):
     image_files = list()
     # num = 0
     if os.path.isfile(abs_path):
-        return 1, abs_path
+        return [abs_path]
     else:
         for subpath in os.listdir(abs_path):
             if os.path.isdir(os.path.join(abs_path, subpath)):
@@ -75,11 +75,11 @@ def _read_image(path):
     return img
 
 
-def _read_tiff(path, bits):
-    img = TIFF.open(path, mode='r')
-    img = img.read_image()
-    img = img.astype(np.float32) / 2 **bits
-    return img
+# def _read_tiff(path, bits):
+#     img = TIFF.open(path, mode='r')
+#     img = img.read_image()
+#     img = img.astype(np.float32) / 2 **bits
+#     return img
 
 
 def _cv2_read_images(path):

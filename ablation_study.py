@@ -7,78 +7,77 @@ from TorchTools.DataTools.FileTools import _all_images
 import numpy as np
 
 
-def main(sigma=10):
+def main(datasets_path, main_path, sigma=10):
     noise_level = float(sigma) / 255.
     print('==============> configuration')
     # task configuration
     demo = 'python -u test.py ' \
            ' --pretrained_model checkpoints/pretrained_models/ablation_study/demo-df2kx6-6-3-64-2-rrdb_checkpoint_1096.0k.path' \
-           ' --model demo --block_type rrdb --n_resblock 6 --channels 64 '\
-           ' --datatype uint8 --crop_scale 1 --img_type raw'
+           ' --model demo --block_type rrdb --n_resblocks 6 --channels 64 '\
+           ' --datatype uint8 --crop_scale 1 '
     demo_deno = 'python -u test.py ' \
                 ' --pretrained_model checkpoints/pretrained_models/ablation_study/demo-dn-df2kx6-6-3-64-2-rrdb_checkpoint_1340.0k.path' \
-                ' --model demo --block_type rrdb --n_resblock 6 --channels 64 ' \
-                ' --datatype uint8 --crop_scale 1 --img_type raw --denoise --sigma ' + str(sigma)
+                ' --model demo --block_type rrdb --n_resblocks 6 --channels 64 ' \
+                ' --datatype uint8 --crop_scale 1  --denoise --sigma ' + str(sigma)
     denoraw = 'python -u test.py ' \
         ' --pretrained_model checkpoints/pretrained_models/ablation_study/denoraw-dn-df2kx6-6-3-64-2-rrdb_checkpoint_1000.0k.path'\
-        ' --model denoraw --block_type rrdb --n_resblock 6 --channels 64 --bias '\
-        ' --datatype uint8 --crop_scale 1 --img_type raw --denoise --sigma '+ str(sigma)
+        ' --model denoraw --block_type rrdb --n_resblocks 6 --channels 64 --bias '\
+        ' --datatype uint8 --crop_scale 1 --denoise --sigma '+ str(sigma)
 
     denorgb = 'python -u test.py ' \
         ' --pretrained_model checkpoints/pretrained_models/ablation_study/denorgb-dn-df2kx6-6-3-64-2-rrdb_checkpoint_830.0k.path'\
-        ' --model denorgb --block_type rrdb --n_resblock 6 --channels 64 '\
-        ' --datatype uint8 --crop_scale 2 --img_type raw --denoise --sigma ' + str(sigma)
+        ' --model denorgb --block_type rrdb --n_resblocks 6 --channels 64 '\
+        ' --datatype uint8 --crop_scale 1 --denoise --sigma ' + str(sigma)
 
     srraw = 'python -u test.py ' \
         ' --pretrained_model checkpoints/pretrained_models/ablation_study/srraw-df2kx6-6-3-64-2-rrdb_checkpoint_1000.0k.path'\
-        ' --model srraw --block_type rrdb --n_resblock 6 --channels 64 --bias '\
-        ' --datatype uint8 --crop_scale 1 --img_type raw --scale 2'
+        ' --model srraw --block_type rrdb --n_resblocks 6 --channels 64 --bias '\
+        ' --datatype uint8 --crop_scale 1 --scale 2'
 
     srraw_deno = 'python -u test.py ' \
         ' --pretrained_model checkpoints/pretrained_models/ablation_study/srraw-dn-df2kx6-6-3-64-2-rrdb_checkpoint_1000.0k.path'\
-        ' --model srraw --block_type rrdb --n_resblock 6 --channels 64 --bias'\
-        ' --datatype uint8 --crop_scale 1 --img_type raw --denoise --scale 2 --sigma ' + str(sigma)
+        ' --model srraw --block_type rrdb --n_resblocks 6 --channels 64 --bias'\
+        ' --datatype uint8 --crop_scale 1  --denoise --scale 2 --sigma ' + str(sigma)
 
     srrgb = 'python -u test.py ' \
         ' --pretrained_model checkpoints/pretrained_models/ablation_study/srrgb-df2kx6-6-3-64-2-rrdb_checkpoint_1100.0k.path'\
-        ' --model srrgb --block_type rrdb --n_resblock 6 --channels 64 '\
-        ' --datatype uint8 --crop_scale 1 --img_type raw --scale 2'
+        ' --model srrgb --block_type rrdb --n_resblocks 6 --channels 64 '\
+        ' --datatype uint8 --crop_scale 1  --scale 2'
 
     srrgb_deno = 'python -u test.py ' \
         ' --pretrained_model checkpoints/pretrained_models/ablation_study/srrgb-dn-df2kx6-6-3-64-2-rrdb_checkpoint_1790.0k.path'\
-        ' --model srrgb --block_type rrdb --n_resblock 6 --channels 64 '\
-        ' --datatype uint8 --crop_scale 1 --img_type raw --scale 2 --denoise --sigma ' + str(sigma)
+        ' --model srrgb --block_type rrdb --n_resblocks 6 --channels 64 '\
+        ' --datatype uint8 --crop_scale 1 --scale 2 --denoise --sigma ' + str(sigma)
 
-    tri1 = 'python -u test.py ' \
+    tenet1 = 'python -u test.py ' \
         ' --pretrained_model checkpoints/pretrained_models/ablation_study/tri1-df2kx6-6-6-64-2-rrdb_checkpoint_1000.0k.path'\
-        ' --model tri1 --block_type rrdb --sr_n_resblocks 6 --dm_n_resblocks 6 --scale 2 --bias --channels 64 '\
-        ' --datatype uint8 --crop_scale 1 --img_type raw'
+        ' --model tenet1 --block_type rrdb --sr_n_resblocks 6 --dm_n_resblocks 6 --scale 2 --bias --channels 64 '\
+        ' --datatype uint8 --crop_scale 1 '
 
-    tri1_deno = 'python -u test.py ' \
+    tenet1_deno = 'python -u test.py ' \
         ' --pretrained_model checkpoints/pretrained_models/ablation_study/tri1-dn-df2kx6-6-6-64-2-rrdb_checkpoint_890.0k.path'\
-        ' --model tri1 --block_type rrdb --sr_n_resblocks 6 --dm_n_resblocks 6 --scale 2 --bias --channels 64 '\
-        ' --datatype uint8 --crop_scale 1 --img_type raw  --denoise --sigma ' + str(sigma)
+        ' --model tenet1 --block_type rrdb --sr_n_resblocks 6 --dm_n_resblocks 6 --scale 2 --bias --channels 64 '\
+        ' --datatype uint8 --crop_scale 1 --denoise --sigma ' + str(sigma)
 
-    tri2_deno = 'python -u test.py ' \
+    tenet2_deno = 'python -u test.py ' \
         ' --pretrained_model checkpoints/pretrained_models/ablation_study/tri2-dn-df2kx6-6-6-64-2-rrdb_checkpoint_1490.0k.path'\
-        ' --model tri2 --block_type rrdb --sr_n_resblocks 6 --dm_n_resblocks 6 --scale 2 --bias --channels 64 '\
-        ' --datatype uint8 --crop_scale 1 --img_type raw  --denoise --sigma ' + str(sigma)
+        ' --model tenet2 --block_type rrdb --sr_n_resblocks 6 --dm_n_resblocks 6 --scale 2 --bias --channels 64 '\
+        ' --datatype uint8 --crop_scale 1 --denoise --sigma ' + str(sigma)
     # add file location information
     # --test_path /data/sony/sim_test --save_path /data/sony/sim_test/kodak/psbx2/hr_rgb_denoise
 
     # comdlines dictionary
     cmdlines = {'demo': demo, 'demo_deno': demo_deno, 'denoraw': denoraw, 'denorgb': denorgb,
                 'srraw': srraw, 'srraw_deno': srraw_deno, 'srrgb': srrgb, 'srrgb_deno': srrgb_deno,
-                'tri1': tri1, 'tri2_deno': tri2_deno,  'tri1_deno': tri1_deno}
+                'tenet1': tenet1, 'tenet2_deno': tenet2_deno,  'tenet1_deno': tenet1_deno}
 
     # # # pipelines, multi-list
     # pipelines = [['demo', 'denorgb', 'srrgb'], ['demo', 'srrgb', 'denorgb'], ['denoraw', 'demo', 'srrgb'],
     #             ['denoraw', 'srraw', 'demo'], ['srraw', 'demo', 'denorgb'], ['srraw', 'denoraw', 'demo'],
-    #             ['demo_deno', 'srrgb'], ['srraw', 'demo_deno'], ['tri1', 'denorgb'], ['denoraw', 'tri1'],
-    #              ['demo', 'srrgb_deno'], ['srraw_deno', 'demo'], ['tri1_deno'], ['tri2_deno']]
-
-    # pipelines = [['denoraw', 'srraw', 'demo'], ['srraw_deno', 'demo']]
-    pipelines = [['denoraw', 'srraw', 'demo']]
+    #             ['demo_deno', 'srrgb'], ['srraw', 'demo_deno'], ['tenet1', 'denorgb'], ['denoraw', 'tenet1'],
+    #              ['demo', 'srrgb_deno'], ['srraw_deno', 'demo'], ['tenet1_deno'], ['tenet2_deno']]
+    pipelines = [['tenet1_deno'], ['tenet2_deno']]
+    # pipelines = [['demo', 'denorgb', 'srrgb']]
     # datasets
     # datasets = ['kodak', 'mcm', 'kodak', 'urban100']
     datasets = ['mcm']
@@ -88,9 +87,8 @@ def main(sigma=10):
     ssims = []
 
     for dataset in datasets:
-        src_path = '/data/datasets/RawSR20181001/sim_test/noisy_input/sigma' + str(sigma) + '/' + dataset
-        gt_path = '/data/datasets/RawSR20181001/sim_test/gt/' + dataset
-        main_path = '/data/datasets/RawSR20181001/sim_test/ablation_study_temp/'
+        src_path = os.path.join(datasets_path, 'noisy_input/sigma') + str(sigma) + '/' + dataset
+        gt_path = os.path.join(datasets_path, 'gt/') + dataset
 
         temp_path1 = os.path.join(main_path, 'temp1')
         temp_path2 = os.path.join(main_path, 'temp2')
@@ -177,13 +175,10 @@ def main(sigma=10):
 
 
 if __name__ == '__main__':
-    sigma = 20
-    main(sigma)
-
-#[26.82021657762418, 26.127086833773713, 28.291192662689422, 28.352354809563224, 26.55998350155382, 27.27737060600308, 28.35628323662874, 27.079588844039858, 28.452422943081846, 28.42365100053013]
-#[0.672683424373921, 0.6235569766926038, 0.7997048510166963, 0.8013336110636118, 0.6542921088923472, 0.7116116571799366, 0.80189088610075, 0.6912227739372292, 0.80282474676964, 0.8026633091559973]
-
-
+    datasets_path = '/home/qiang/Documents/data/pixel-shift-200/TENet_sim_test'
+    save_path = '/home/qiang/Documents/data/test/abalation'
+    sigma = 10
+    main(datasets_path, save_path, sigma)
 
 
 

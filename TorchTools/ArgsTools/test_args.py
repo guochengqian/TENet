@@ -15,8 +15,6 @@ class TestArgs():
                             help='denoise store_true')
         parser.add_argument('--sigma', default=2, type=int,
                             help='noise level GAWN')
-        parser.add_argument('--img_type', default='syn', type=str,
-                            help='raw or syn(synthesize)')
         parser.add_argument('--save_path',
                             default='/data/sony/datasets_backup/real_test/sr_output', type=str,
                             help='save_path')
@@ -69,7 +67,7 @@ class TestArgs():
 
         if self.args.denoise:
             # self.args.post = 'sigma'+ str(self.args.sigma)  + '-' + self.args.pretrained_model.split('/')[-1]+ '.png'
-            self.args.post = self.args.model+str(self.args.sigma)  + '.png'
+            self.args.post = self.args.model+'_sigma'+str(self.args.sigma) + '.png'
         else:
             # self.args.post = self.args.pretrained_model.split('/')[-1] + '.png'
             self.args.post = self.args.model + '.png'
