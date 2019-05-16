@@ -38,13 +38,13 @@ Please cite the following paper if you feel TENet is useful to your research
 
 ## TENet
 
-our approach can be divided into two parts, the first part is mapping of joint denoising and SR, 
-the second part converts the SR mosaic image into full color image.
+Our approach can be divided into two parts, the first part is mapping of joint denoising and SR, 
+and the second part converts the SR mosaic image into full color image.
 The two parts can be trained and performed jointly.
 The network structure is illustrated as blow.
 
 <p align="center">
-  <img height="450" src="figures/Network.png">
+  <img height="300" src="figures/Network.png">
 </p>
 
 ### Pixel Shift Technology
@@ -62,7 +62,7 @@ In this way, the collected images are artifacts-free, which leads to better trai
 
 ### Results on Real Images
 <p align="center">
-  <img height="600" src="figures/Surf.png">
+  <img height="200" src="figures/Surf.png">
 </p>
 
 ### Train Network
