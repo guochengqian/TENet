@@ -23,24 +23,24 @@ Please cite the following paper if you feel TENet is useful to your research
 2. Place your own **input images** in `$YourInputPath` folder.  You will save output in `$YourSavePath` folder.
 
 3. Run test.
-   1. Model trained by simulation datasets 
+   1. test model trained by simulation datasets 
         ```
         sh ./scrip/test_tennet2-dn.sh  
         ```  
-        Don't forget to change $YourInputPath and $YourSavePath
-         
-   2. Model trained by PixelShift200 datasets
+ 
+   2. test model trained by PixelShift200 datasets
         ```
         sh ./scrip/test_tennet2-dn-pixelshift200.sh  
         ```  
-
+        Don't forget to change $YourInputPath and $YourSavePath
 
  
 
 ## TENet
 <p align="center">
-  <img height="120" src="figures/Network.pdf">
+  <img height="120" src="figures/Network.png">
 </p>
+
 
 ### Pixel Shift Technology
 
