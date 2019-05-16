@@ -76,4 +76,4 @@ In this way, the collected images are artifacts-free, which leads to better trai
 
 
 ### Pretrained models location
-    /mnt/lustre/DATAshare2/qianguocheng/senseSR/TENet_datasets/pretrained_models
+   pre-trained models are available here. [google](https://drive.google.com/drive/folders/1iOopGVTnX1IZIs2XtLZOZjUyNt-tU8BX?usp=sharing) 
