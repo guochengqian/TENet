@@ -38,18 +38,27 @@ Please cite the following paper if you feel TENet is useful to your research
 
 ## TENet
 <p align="center">
-  <img height="120" src="figures/Network.png">
+  <img height="600" src="figures/Network.png">
 </p>
 
 
 ### Pixel Shift Technology
+We employ advanced pixel shift technology to perform a full color sampling of the image.
+Pixel shift technology takes four samples of the same image, and physically controls the camera sensor to move one pixel horizontally or vertically at each sampling to capture all color information at each pixel.
+The pixel shift technology ensures that the sampled images follow the distribution of natural images sampled by the camera, and the full information of the color is completely obtained.
+In this way, the collected images are artifacts-free, which leads to better training results for demosaicing related tasks.
 
+<p align="center">
+  <img height="600" src="figures/PixelShift.png">
+</p>
 
 ### Results on simulation datasets
 
 
 ### Results on Real Images
-
+<p align="center">
+  <img height="600" src="figures/Surf.png">
+</p>
 
 ### Train Network
 1. Train code
