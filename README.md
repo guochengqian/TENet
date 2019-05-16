@@ -37,11 +37,10 @@ Please cite the following paper if you feel TENet is useful to your research
  
 
 ## TENet
-our approach can be divided into two parts, the first part is mapping of joint denoising and SR, denoted with $\mathcal{F}_M$, which actually jointly implements $\mathcal{D}_M$ and $\mathcal{S}_M$, the second part is mapping $\mathcal{C}_M$, which convert the SR mosaic image into full color image.
-The mapping $\mathcal{F}_M$ and $\mathcal{C}_M$ can be trained and performed jointly.
-At first, the Bayer mosaic image $M_n^{LR}$ is extracted into four color maps $M_n^{LR\diamond}$, so that the spatial information of the same color is more easily extracted with convolution operation.
-Mapping $\mathcal{F}_M$ maps these four color maps to a SR noise-free mosaic color maps $M^{SR\diamond}$, and which is then mapped to a SR three-channel color image by the mapping $\mathcal{C}_M$.
-We employ the deep network of ESRGAN \cite{ESRGAN} to implement these two mappings, which uses a specially designed Residual in Residual Dense Block (RRDB) to increase the stability of the training.
+
+our approach can be divided into two parts, the first part is mapping of joint denoising and SR, 
+the second part converts the SR mosaic image into full color image.
+The two parts can be trained and performed jointly.
 The network structure is illustrated as blow.
 
 <p align="center">
