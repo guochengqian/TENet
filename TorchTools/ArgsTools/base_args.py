@@ -16,7 +16,7 @@ class BaseArgs():
         parser.add_argument('--max_noise', default=0.0748, type=float, help='noise_level')
         parser.add_argument('--min_noise', default=0.00, type=float, help='noise_level')
 
-        parser.add_argument('--batch_size', default=2, type=int, help='mini-batch size (default:8)')
+        parser.add_argument('--batch_size', default=16, type=int, help='mini-batch size (default:8)')
         parser.add_argument('--patch_size', default=64, type=int, help='height of patch (default: 64)')
 
         parser.add_argument('--in_channels', default=1, type=int, help='in_channels')
@@ -55,8 +55,8 @@ class BaseArgs():
                             help='path to pretrained model(default: none)')
         parser.add_argument('--norm_type', default=None, type=str,
                             help='dm_block_type(default: rrdb)')
-        parser.add_argument('--block_type', default='res', type=str,
-                            help='dm_block_type(default: res)')
+        parser.add_argument('--block_type', default='rrdb', type=str,
+                            help='dm_block_type(default: rrdb)')
         parser.add_argument('--act_type', default='relu', type=str,
                             help='activation layer {relu, prelu, leakyrelu}')
         parser.add_argument('--bias', action='store_true',

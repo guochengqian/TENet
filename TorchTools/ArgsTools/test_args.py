@@ -33,8 +33,8 @@ class TestArgs():
                             help='path to pretrained model(default: none)')
         parser.add_argument('--norm_type', default=None, type=str,
                             help='dm_block_type(default: rrdb)')
-        parser.add_argument('--block_type', default='res', type=str,
-                            help='dm_block_type(default: res)')
+        parser.add_argument('--block_type', default='rrdb', type=str,
+                            help='dm_block_type(default: rrdb)')
         parser.add_argument('--act_type', default='relu', type=str,
                             help='activation layer {relu, prelu, leakyrelu}')
         parser.add_argument('--bias', action='store_true',
