@@ -62,7 +62,7 @@ In this way, the collected images are artifacts-free, which leads to better trai
 
 ### Results on Real Images
 <p align="center">
-  <img height="200" src="figures/Surf.png">
+  <img width="800" src="figures/Surf.png">
 </p>
 
 ### Train Network
