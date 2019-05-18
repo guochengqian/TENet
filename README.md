@@ -13,8 +13,6 @@ Please cite the following paper if you feel TENet is useful to your research
   journal={arXiv preprint arXiv:1905.02538},
   year={2019}
 }
-
-
 ```
 
 ## Qucik Test
