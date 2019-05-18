@@ -1,4 +1,4 @@
-# TENet <a href="https://arxiv.org/abs/1905.02538" target="_blank">[PDF]</a> 
+# TENet <a href="https://arxiv.org/abs/1905.02538" target="_blank">[PDF]</a> <a href="https://drive.google.com/drive/folders/1iOopGVTnX1IZIs2XtLZOZjUyNt-tU8BX?usp=sharing">[Checkpoints]</a>
 <!--<a href="https://arxiv.org/abs/1905.02538" target="_blank">[pre-trained models]</a> -->
 <!--<a href="https://arxiv.org/abs/1905.02538" target="_blank">[datasets]</a> -->
 ### Trinity of Pixel Enhancement: a Joint Solution for Demosaicing, Denoising and Super-Resolution
@@ -6,7 +6,16 @@ By [Guocheng Qian](https://guochengqian.github.io/), [Jinjin Gu](http://www.jaso
 
 ### Citation 
 Please cite the following paper if you feel TENet is useful to your research
+```
+@article{qian2019trinity,
+  title={Trinity of Pixel Enhancement: a Joint Solution for Demosaicking, Denoising and Super-Resolution},
+  author={Qian, Guocheng and Gu, Jinjin and Ren, Jimmy S and Dong, Chao and Zhao, Furong and Lin, Juan},
+  journal={arXiv preprint arXiv:1905.02538},
+  year={2019}
+}
 
+
+```
 
 ## Qucik Test
 ### Dependencies
@@ -34,16 +43,16 @@ Please cite the following paper if you feel TENet is useful to your research
         ```
         sh ./scrip/test_tennet2-dn-pixelshift200.sh  
         ```  
-        Don't forget to change $YourInputPath and $YourSavePath
+        Don't forget to change $YourInputPath and $YourSavePath in .sh file.
 
  
 
 ## TENet
 
-Our approach can be divided into two parts, the first part is mapping of joint denoising and SR, 
-and the second part converts the SR mosaic image into full color image.
+Our approach can be divided into two parts, the first part is a mapping of joint denoising and SR, 
+and the second part converts the SR mosaic image into a full color image.
 The two parts can be trained and performed jointly.
-The network structure is illustrated as blow.
+The network structure is illustrated as follows.
 
 <p align="center">
   <img height="300" src="figures/Network.png">
@@ -77,5 +86,8 @@ In this way, the collected images are artifacts-free, which leads to better trai
 ## Ablation Study 
 
 
-### Pretrained models location
+## Pretrained models location
    pre-trained models are available here. [google](https://drive.google.com/drive/folders/1iOopGVTnX1IZIs2XtLZOZjUyNt-tU8BX?usp=sharing) 
+
+## PixelShift200 Datasets
+    To be released before 

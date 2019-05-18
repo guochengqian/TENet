@@ -8,59 +8,58 @@ import numpy as np
 
 
 def main(datasets_path, main_path, sigma=10):
-    noise_level = float(sigma) / 255.
     print('==============> configuration')
     # task configuration
     demo = 'python -u test.py ' \
-           ' --pretrained_model checkpoints/pretrained_models/ablation_study/demo-df2kx6-6-3-64-2-rrdb_checkpoint_1096.0k.path' \
+           ' --pretrained_model checkpoints/ablation_study/demo-df2kx6-6-3-64-2-rrdb_checkpoint_1096.0k.path' \
            ' --model demo --block_type rrdb --n_resblocks 6 --channels 64 '\
            ' --datatype uint8 --crop_scale 1 '
     demo_deno = 'python -u test.py ' \
-                ' --pretrained_model checkpoints/pretrained_models/ablation_study/demo-dn-df2kx6-6-3-64-2-rrdb_checkpoint_1340.0k.path' \
+                ' --pretrained_model checkpoints/ablation_study/demo-dn-df2kx6-6-3-64-2-rrdb_checkpoint_1340.0k.path' \
                 ' --model demo --block_type rrdb --n_resblocks 6 --channels 64 ' \
                 ' --datatype uint8 --crop_scale 1  --denoise --sigma ' + str(sigma)
     denoraw = 'python -u test.py ' \
-        ' --pretrained_model checkpoints/pretrained_models/ablation_study/denoraw-dn-df2kx6-6-3-64-2-rrdb_checkpoint_1000.0k.path'\
+        ' --pretrained_model checkpoints/ablation_study/denoraw-dn-df2kx6-6-3-64-2-rrdb_checkpoint_1000.0k.path'\
         ' --model denoraw --block_type rrdb --n_resblocks 6 --channels 64 --bias '\
         ' --datatype uint8 --crop_scale 1 --denoise --sigma '+ str(sigma)
 
     denorgb = 'python -u test.py ' \
-        ' --pretrained_model checkpoints/pretrained_models/ablation_study/denorgb-dn-df2kx6-6-3-64-2-rrdb_checkpoint_830.0k.path'\
+        ' --pretrained_model checkpoints/ablation_study/denorgb-dn-df2kx6-6-3-64-2-rrdb_checkpoint_830.0k.path'\
         ' --model denorgb --block_type rrdb --n_resblocks 6 --channels 64 '\
         ' --datatype uint8 --crop_scale 1 --denoise --sigma ' + str(sigma)
 
     srraw = 'python -u test.py ' \
-        ' --pretrained_model checkpoints/pretrained_models/ablation_study/srraw-df2kx6-6-3-64-2-rrdb_checkpoint_1000.0k.path'\
+        ' --pretrained_model checkpoints/ablation_study/srraw-df2kx6-6-3-64-2-rrdb_checkpoint_1000.0k.path'\
         ' --model srraw --block_type rrdb --n_resblocks 6 --channels 64 --bias '\
         ' --datatype uint8 --crop_scale 1 --scale 2'
 
     srraw_deno = 'python -u test.py ' \
-        ' --pretrained_model checkpoints/pretrained_models/ablation_study/srraw-dn-df2kx6-6-3-64-2-rrdb_checkpoint_1000.0k.path'\
+        ' --pretrained_model checkpoints/ablation_study/srraw-dn-df2kx6-6-3-64-2-rrdb_checkpoint_1000.0k.path'\
         ' --model srraw --block_type rrdb --n_resblocks 6 --channels 64 --bias'\
         ' --datatype uint8 --crop_scale 1  --denoise --scale 2 --sigma ' + str(sigma)
 
     srrgb = 'python -u test.py ' \
-        ' --pretrained_model checkpoints/pretrained_models/ablation_study/srrgb-df2kx6-6-3-64-2-rrdb_checkpoint_1100.0k.path'\
+        ' --pretrained_model checkpoints/ablation_study/srrgb-df2kx6-6-3-64-2-rrdb_checkpoint_1100.0k.path'\
         ' --model srrgb --block_type rrdb --n_resblocks 6 --channels 64 '\
         ' --datatype uint8 --crop_scale 1  --scale 2'
 
     srrgb_deno = 'python -u test.py ' \
-        ' --pretrained_model checkpoints/pretrained_models/ablation_study/srrgb-dn-df2kx6-6-3-64-2-rrdb_checkpoint_1790.0k.path'\
+        ' --pretrained_model checkpoints/ablation_study/srrgb-dn-df2kx6-6-3-64-2-rrdb_checkpoint_1790.0k.path'\
         ' --model srrgb --block_type rrdb --n_resblocks 6 --channels 64 '\
         ' --datatype uint8 --crop_scale 1 --scale 2 --denoise --sigma ' + str(sigma)
 
     tenet1 = 'python -u test.py ' \
-        ' --pretrained_model checkpoints/pretrained_models/ablation_study/tri1-df2kx6-6-6-64-2-rrdb_checkpoint_1000.0k.path'\
+        ' --pretrained_model checkpoints/ablation_study/tri1-df2kx6-6-6-64-2-rrdb_checkpoint_1000.0k.path'\
         ' --model tenet1 --block_type rrdb --sr_n_resblocks 6 --dm_n_resblocks 6 --scale 2 --bias --channels 64 '\
         ' --datatype uint8 --crop_scale 1 '
 
     tenet1_deno = 'python -u test.py ' \
-        ' --pretrained_model checkpoints/pretrained_models/ablation_study/tri1-dn-df2kx6-6-6-64-2-rrdb_checkpoint_890.0k.path'\
+        ' --pretrained_model checkpoints/ablation_study/tri1-dn-df2kx6-6-6-64-2-rrdb_checkpoint_890.0k.path'\
         ' --model tenet1 --block_type rrdb --sr_n_resblocks 6 --dm_n_resblocks 6 --scale 2 --bias --channels 64 '\
         ' --datatype uint8 --crop_scale 1 --denoise --sigma ' + str(sigma)
 
     tenet2_deno = 'python -u test.py ' \
-        ' --pretrained_model checkpoints/pretrained_models/ablation_study/tri2-dn-df2kx6-6-6-64-2-rrdb_checkpoint_1490.0k.path'\
+        ' --pretrained_model checkpoints/ablation_study/tri2-dn-df2kx6-6-6-64-2-rrdb_checkpoint_1490.0k.path'\
         ' --model tenet2 --block_type rrdb --sr_n_resblocks 6 --dm_n_resblocks 6 --scale 2 --bias --channels 64 '\
         ' --datatype uint8 --crop_scale 1 --denoise --sigma ' + str(sigma)
     # add file location information
@@ -72,12 +71,11 @@ def main(datasets_path, main_path, sigma=10):
                 'tenet1': tenet1, 'tenet2_deno': tenet2_deno,  'tenet1_deno': tenet1_deno}
 
     # # # pipelines, multi-list
-    # pipelines = [['demo', 'denorgb', 'srrgb'], ['demo', 'srrgb', 'denorgb'], ['denoraw', 'demo', 'srrgb'],
-    #             ['denoraw', 'srraw', 'demo'], ['srraw', 'demo', 'denorgb'], ['srraw', 'denoraw', 'demo'],
-    #             ['demo_deno', 'srrgb'], ['srraw', 'demo_deno'], ['tenet1', 'denorgb'], ['denoraw', 'tenet1'],
-    #              ['demo', 'srrgb_deno'], ['srraw_deno', 'demo'], ['tenet1_deno'], ['tenet2_deno']]
-    pipelines = [['tenet1_deno'], ['tenet2_deno']]
-    # pipelines = [['demo', 'denorgb', 'srrgb']]
+    pipelines = [['demo', 'denorgb', 'srrgb'], ['demo', 'srrgb', 'denorgb'], ['denoraw', 'demo', 'srrgb'],
+                ['denoraw', 'srraw', 'demo'], ['srraw', 'demo', 'denorgb'], ['srraw', 'denoraw', 'demo'],
+                ['demo_deno', 'srrgb'], ['srraw', 'demo_deno'], ['tenet1', 'denorgb'], ['denoraw', 'tenet1'],
+                 ['demo', 'srrgb_deno'], ['srraw_deno', 'demo'], ['tenet1_deno'], ['tenet2_deno']]
+
     # datasets
     # datasets = ['kodak', 'mcm', 'kodak', 'urban100']
     datasets = ['mcm']
