@@ -44,7 +44,13 @@ Please cite the following paper if you feel TENet is useful to your research
         ```  
         Don't forget to change $YourInputPath and $YourSavePath in .sh file.
 
- 
+ ### Train Network
+1. Train code
+    
+    ```
+    sh scripy\run_tenet2-deno.sh
+    ```
+
 
 ## TENet
 
@@ -57,7 +63,10 @@ The network structure is illustrated as follows.
   <img height="300" src="figures/Network.png">
 </p>
 
-### Pixel Shift Technology
+We train our model both on simulated datasets([DF2k](https://github.com/xinntao/BasicSR)) and our proposed full color samped real word
+4k dataset PixelShift200 (to be released soon).
+
+## PixelShift200 dataset
 We employ advanced pixel shift technology to perform a full color sampling of the image.
 Pixel shift technology takes four samples of the same image, and physically controls the camera sensor to move one pixel horizontally or vertically at each sampling to capture all color information at each pixel.
 The pixel shift technology ensures that the sampled images follow the distribution of natural images sampled by the camera, and the full information of the color is completely obtained.
@@ -67,7 +76,8 @@ In this way, the collected images are artifacts-free, which leads to better trai
   <img height="200" src="figures/PixelShift.png">
 </p>
 
-### Results on simulation datasets
+## Result
+### Results on simulated datasets
 
 
 ### Results on Real Images
@@ -75,12 +85,6 @@ In this way, the collected images are artifacts-free, which leads to better trai
   <img width="800" src="figures/Surf.png">
 </p>
 
-### Train Network
-1. Train code
-    
-    ```
-    sh scripy\run_tenet2-deno.sh
-    ```
 
 ## Ablation Study 
 

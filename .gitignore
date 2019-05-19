@@ -2,3 +2,5 @@ checkpoints/
 *.pyc
 cmp_psnr.py
 cmp_psnr_dn.py
+ablation_study.py
+train_1gt.py
