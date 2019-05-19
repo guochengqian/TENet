@@ -1,6 +1,5 @@
 import os
 import argparse
-import time
 import shutil
 import importlib
 import numpy as np
@@ -9,7 +8,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from datasets.load_dataset import LoadSimData
-from model.common import print_model_parm_nums, demosaick_layer
+from model.common import print_model_parm_nums
 from TorchTools.ArgsTools.base_args import BaseArgs
 from TorchTools.LogTools.logger_tensorboard import Tf_Logger
 from TorchTools.LossTools.loss import C_Loss, VGGLoss
@@ -27,11 +26,11 @@ def main():
     ###############################################################################################
     print('===> Creating dataloader...')
     train_set = LoadSimData(args.train_list, args.patch_size, args.scale, args.denoise, args.max_noise, args.min_noise,
-                           args.downsampler, args.get2label)
+                            args.downsampler, args.get2label)
     train_loader = DataLoader(dataset=train_set, num_workers=4, batch_size=args.batch_size,
                               shuffle=True, pin_memory=True)
     valid_set = LoadSimData(args.valid_list, args.patch_size, args.scale, args.denoise, args.max_noise, args.min_noise,
-                           args.downsampler, args.get2label)
+                            args.downsampler, args.get2label)
     valid_loader = DataLoader(dataset=valid_set, num_workers=4, batch_size=args.batch_size,
                               shuffle=True, pin_memory=True)
 
