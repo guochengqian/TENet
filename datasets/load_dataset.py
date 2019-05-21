@@ -121,10 +121,8 @@ class LoadSimData(data.Dataset):
 
         if self.downsampler == 'bic':
             lr_rgb = cv2.resize(rgb.copy(), (0,0), fx=1/self.scale, fy=1/self.scale, interpolation=cv2.INTER_CUBIC)
-            # lr_rgb = lr_rgb.astype(np.float32) / 255.
             lr_rgb = torch.from_numpy(np.ascontiguousarray(np.transpose(lr_rgb, [2, 0, 1]))).float()
 
-        # rgb = rgb.astype(np.float32) / 255.
         rgb = torch.from_numpy(np.ascontiguousarray(np.transpose(rgb, [2, 0, 1]))).float()
 
         if self.downsampler == 'avg':

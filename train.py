@@ -45,15 +45,9 @@ def main():
     ###############################################################################################
     # optimize
     criterion = torch.nn.MSELoss()
-    # if args.vgg_lambda != 0:
-    #     vggloss = VGGLoss(vgg_path=args.vgg_path, layers=args.vgg_layer, loss=args.vgg_loss)
-    # else:
-    #     vggloss = None
 
     if device.type == 'cuda':
         criterion = criterion.cuda()
-        # if args.vgg_lambda != 0:
-        #     vggloss.cuda()
 
     # optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr, betas=(0.9, 0.999), eps=1e-8)
@@ -79,8 +73,6 @@ def main():
     losses = AverageMeter()
     sr_losses = AverageMeter()
     dm_losses = AverageMeter()
-    # vgg_losses = AverageMeter()
-
     current_iter = args.start_iters
 
     print('---------- Start training -------------')
@@ -113,14 +105,8 @@ def main():
                 sr_loss = 0.
                 args.sr_lambda = 0.
 
-            # loss function
-            # if args.vgg_lambda != 0:
-            #     vgg_loss = vggloss(output, gt)
-            # else:
-            #     vgg_loss = torch.zeros(1).to(device)
-
             dm_loss = C_Loss(output, gt).cuda()
-            # loss = args.dm_lambda * dm_loss + args.sr_lambda * sr_loss + args.vgg_lambda * vgg_loss
+
             loss = args.dm_lambda * dm_loss + args.sr_lambda * sr_loss
 
             # optim
@@ -135,7 +121,6 @@ def main():
             else:
                 sr_losses.update(sr_loss, gt.size(0))
 
-            # vgg_losses.update(vgg_loss.item(), gt.size(0))
 
             if current_iter % args.print_freq == 0:
                 print('Iter:{0}\t'

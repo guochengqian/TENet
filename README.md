@@ -15,8 +15,7 @@ Please cite the following paper if you feel TENet is useful to your research
 }
 ```
 
-
-## Qucik Test
+## Quick Test
 ### Dependencies
 - Python >= 3
 - [PyTorch 0.4.1](https://pytorch.org/) (CUDA version >= 7.5 if installing with CUDA. [More details](https://pytorch.org/get-started/previous-versions/))
@@ -31,9 +30,11 @@ Please cite the following paper if you feel TENet is useful to your research
     cd TENet
     ```
 2. Place your own **input images** in `$YourInputPath` folder.  You will save output in `$YourSavePath` folder.
-
+   input images should be Bayer Raw images (pattern is rggb). 
+   
+   We provide our test datasets [here](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R). 
 3. Run test.
-   1. test model trained by simulation datasets 
+   1. test model trained by synthesis datasets 
         ```
         sh ./scrip/test_tennet2-dn.sh  
         ```  
@@ -44,11 +45,42 @@ Please cite the following paper if you feel TENet is useful to your research
         ```  
         Don't forget to change $YourInputPath and $YourSavePath in .sh file.
 
- ### Train Network
-1. Train code
+## How to Train
+We train our model both on synthesis datasets([DF2k](https://github.com/xinntao/BasicSR)) and our proposed full color sampled real word
+4k dataset PixelShift200 (to be released soon).
+
+1. Data preparation
+    1. Synthesis data preparation
+        1. Download ([DF2k](https://github.com/xinntao/BasicSR)) dataset, which is a combination dataset of DIV2K and Flickr2K
+        2. Crop images into resolution 256*256, using followed code:
+            ```
+            python ./dataset/crop_images.py
+            ```
+        3. generate txt file used for training
+            ```
+            python ./dataset/generate_train_df2k.py
+            ```       
+        
+    2. PixelShift200 data preparation 
+        1. Download pixelShift200 (to be released soon). They are .mat format, haing 4 channels (R, Gr, Gb, B).
+        2. Crop images into 256*256, using followed code:
+            ```
+            python ./dataset/crop_mats.py
+            ```
+        3. generate txt file used for training
+            ```
+            python ./dataset/generate_train_mat.py
+            ```
+                         
+2. Train model on synthesis dataset
     
     ```
-    sh scripy\run_tenet2-deno.sh
+    sh scripy\run_tenet2-dn.sh
+    ```
+
+3. Train model on PixelShift200 dataset
+    ```
+    sh scripy\run_tenet2-dn-ps200.sh    
     ```
 
 
@@ -63,8 +95,7 @@ The network structure is illustrated as follows.
   <img height="300" src="figures/Network.png">
 </p>
 
-We train our model both on simulated datasets([DF2k](https://github.com/xinntao/BasicSR)) and our proposed full color samped real word
-4k dataset PixelShift200 (to be released soon).
+
 
 ## PixelShift200 dataset
 We employ advanced pixel shift technology to perform a full color sampling of the image.
@@ -76,8 +107,10 @@ In this way, the collected images are artifacts-free, which leads to better trai
   <img height="200" src="figures/PixelShift.png">
 </p>
 
+To be released before May 28.
+
 ## Result
-### Results on simulated datasets
+<!--### Results on simulated datasets-->
 
 
 ### Results on Real Images
@@ -86,11 +119,6 @@ In this way, the collected images are artifacts-free, which leads to better trai
 </p>
 
 
-## Ablation Study 
-
-
 ## Pretrained models location
    pre-trained models are available here. [google](https://drive.google.com/drive/folders/1iOopGVTnX1IZIs2XtLZOZjUyNt-tU8BX?usp=sharing) 
 
-## PixelShift200 Datasets
-    To be released before May 28.

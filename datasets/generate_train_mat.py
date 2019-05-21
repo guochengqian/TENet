@@ -3,11 +3,9 @@ import random
 import pdb
 
 # data_path = '/data/sony/datasets_backup/simulated_datasets/train_df2k/rgb_gt/'
-train_data_path = '/data/datasets/RawSR20181001/pixel-shift-200/mat4k/train/crop256'
-test_data_path = '/data/datasets/RawSR20181001/pixel-shift-200/mat4k/test/crop512'
+train_data_path = '/data/pixel-shift-200/PixelShift200/PixelShift200_crop'
+test_data_path = '/data/pixel-shift-200/PixelShift200/PixelShift200_valid'
 
-# train_data_path = '/mnt/lustre/share/qgc_datasets/sony/raw2019/mat4k/train/crop256/'
-# test_data_path = '/mnt/lustre/share/qgc_datasets/sony/raw2019/mat4k/test/crop512/'
 
 train_dst_path = 'train_mat.txt'
 valid_dst_path = 'valid_mat.txt'

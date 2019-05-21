@@ -1,4 +1,7 @@
 checkpoints/
+logs/
+output/
+
 *.pyc
 cmp_psnr.py
 cmp_psnr_dn.py

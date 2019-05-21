@@ -1,14 +1,13 @@
 import os
 import random
-import pdb
 
-# data_path = '/data/datasets/DIV2K_train_HR/gt'
-data_path = '/mnt/lustre/share/qgc_datasets/DF2K-cropped-256/'
+data_path = '/data/Df2k/df2k_crop256'
 train_dst_path = 'train_df2k.txt'
 valid_dst_path = 'valid_df2k.txt'
 valid_datasets_num = 200
 # type_list = ['png', 'PNG', 'tiff', 'tif', 'TIFF', 'JPG', 'jgp']
 type_list = ['png', 'PNG']
+
 # remove old
 if os.path.exists(train_dst_path):
     os.system('rm '+train_dst_path)
