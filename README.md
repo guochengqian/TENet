@@ -41,7 +41,7 @@ Please cite the following paper if you feel TENet is useful to your research
  
    2. test model trained by PixelShift200 datasets
         ```
-        sh ./scrip/test_tennet2-dn-pixelshift200.sh  
+        sh ./scrip/test_tennet2-dn-ps200.sh  
         ```  
         Don't forget to change $YourInputPath and $YourSavePath in .sh file.
 
@@ -119,6 +119,13 @@ To be released before May 28.
 </p>
 
 
-## Pretrained models location
+# Resource Collection
+### Pretrained models location
    pre-trained models are available here. [google](https://drive.google.com/drive/folders/1iOopGVTnX1IZIs2XtLZOZjUyNt-tU8BX?usp=sharing) 
 
+### Test Data
+   [Test Data](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R).
+
+### PixelShift200 dataset 
+   Before May 28
+   
