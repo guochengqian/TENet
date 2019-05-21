@@ -63,7 +63,7 @@ We train our model both on synthesis datasets([DF2k](https://github.com/xinntao/
         
     2. PixelShift200 data preparation 
         1. Download pixelShift200 (to be released soon). They are .mat format, haing 4 channels (R, Gr, Gb, B).
-        2. Crop images into 256*256, using followed code:
+        2. Crop images into 512*512, using followed code:
             ```
             python ./dataset/crop_mats.py
             ```
