@@ -1,5 +1,5 @@
-# TENet <a href="https://arxiv.org/abs/1905.02538" target="_blank">[PDF]</a> <a href="https://drive.google.com/open?id=1FPELQupnGR750EoUWTY_0owkEnlAGVYH">[Checkpoints]</a>
-<!--<a href="https://arxiv.org/abs/1905.02538" target="_blank">[pre-trained models]</a> -->
+# TENet <a href="https://arxiv.org/abs/1905.02538" target="_blank">[PDF]</a> 
+<!--<a href="https://drive.google.com/open?id=1FPELQupnGR750EoUWTY_0owkEnlAGVYH">[Checkpoints]</a>-->
 <!--<a href="https://arxiv.org/abs/1905.02538" target="_blank">[datasets]</a> -->
 ### Trinity of Pixel Enhancement: a Joint Solution for Demosaicing, Denoising and Super-Resolution
 By [Guocheng Qian](https://guochengqian.github.io/), [Jinjin Gu](http://www.jasongt.com/), [Jimmy S. Ren](http://www.jimmyren.com/), [Chao Dong](https://scholar.google.com.hk/citations?user=OSDCB0UAAAAJ&hl=en), Furong Zhao, Juan Lin
@@ -14,7 +14,17 @@ Please cite the following paper if you feel TENet is useful to your research
   year={2019}
 }
 ```
+# Resources Collection
+### Pretrained models location
+Before May 28.
+<!--[GoogleDrive](https://drive.google.com/open?id=1FPELQupnGR750EoUWTY_0owkEnlAGVYH) -->
 
+### Test Data
+[GoogleDrive](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R)
+
+### PixelShift200 dataset 
+Before May 28
+   
 ## Quick Test
 ### Dependencies
 - Python >= 3
@@ -32,18 +42,18 @@ Please cite the following paper if you feel TENet is useful to your research
 2. Place your own **input images** in `$YourInputPath` folder.  You will save output in `$YourSavePath` folder.
    input images should be Bayer Raw images (pattern is rggb). 
    
-   We provide our test datasets. [GoogleDrive](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R). 
 3. Run test.
    1. test model trained by synthesis datasets 
         ```
-        sh ./scrip/test_tennet2-dn.sh  
+        sh ./script/test_tennet2-dn.sh  
         ```  
  
    2. test model trained by PixelShift200 datasets
         ```
-        sh ./scrip/test_tennet2-dn-ps200.sh  
+        sh ./script/test_tenet2-dn-ps200.sh  
         ```  
         Don't forget to change $YourInputPath and $YourSavePath in .sh file.
+
 
 ## How to Train
 We train our model both on synthesis datasets([DF2k](https://github.com/xinntao/BasicSR)) and our proposed full color sampled real word
@@ -75,12 +85,12 @@ We train our model both on synthesis datasets([DF2k](https://github.com/xinntao/
 2. Train model on synthesis dataset
     
     ```
-    sh scripy\run_tenet2-dn.sh
+    sh script/run_tenet2-dn.sh
     ```
 
 3. Train model on PixelShift200 dataset
     ```
-    sh scripy\run_tenet2-dn-ps200.sh    
+    sh script/run_tenet2-dn-ps200.sh    
     ```
 
 
@@ -107,7 +117,6 @@ In this way, the collected images are artifacts-free, which leads to better trai
   <img height="200" src="figures/PixelShift.png">
 </p>
 
-To be released before May 28.
 
 ## Result
 <!--### Results on simulated datasets-->
@@ -119,14 +128,3 @@ To be released before May 28.
 </p>
 
 
-# Resource Collection
-### Pretrained models location
-[GoogleDrive](https://drive.google.com/open?id=1FPELQupnGR750EoUWTY_0owkEnlAGVYH) 
-
-
-### Test Data
-[GoogleDrive](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R)
-
-### PixelShift200 dataset 
-   Before May 28
-   

@@ -101,6 +101,11 @@ def main():
             w = img.shape[1]
             # if input is raw, assure img size is multipliers of 2
             if in_channels == 4:
+                if h%2 != 0 or w%2 !=0:
+                    h = h - h%2
+                    w = w - w%2
+                    img = img[:, :, 0:h, 0:w]
+
                 img = torch.from_numpy(img).float().contiguous().view(-1, 1, h, w)
                 img = raw_down_sample(img)
             else:
@@ -115,7 +120,10 @@ def main():
             del img
 
             im_inputs = im_inputs.to(device)
-            output = torch.zeros((args.crop_scale ** 2, 1, out_channels, h * args.scale//args.crop_scale, w * args.scale//args.crop_scale))
+            h = im_inputs.shape[-2]
+            w = im_inputs.shape[-1]
+
+            output = torch.zeros((args.crop_scale ** 2, 1, out_channels, h*args.scale*2, w*args.scale*2))
 
             for j in range(args.crop_scale ** 2):
                 if args.model == 'tenet2':
