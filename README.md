@@ -32,7 +32,7 @@ Please cite the following paper if you feel TENet is useful to your research
 2. Place your own **input images** in `$YourInputPath` folder.  You will save output in `$YourSavePath` folder.
    input images should be Bayer Raw images (pattern is rggb). 
    
-   We provide our test datasets [here](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R). 
+   We provide our test datasets. [GoogleDrive](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R). 
 3. Run test.
    1. test model trained by synthesis datasets 
         ```
@@ -121,10 +121,10 @@ To be released before May 28.
 
 # Resource Collection
 ### Pretrained models location
-   pre-trained models are available here. [google](https://drive.google.com/drive/folders/1iOopGVTnX1IZIs2XtLZOZjUyNt-tU8BX?usp=sharing) 
+   pre-trained models are available [GoogleDrive](https://drive.google.com/open?id=1k89JnVtxzLj6WRK_jWjo4re6zjnWeIsr) 
 
 ### Test Data
-   [Test Data](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R).
+   Test images are available [GoogleDrive](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R).
 
 ### PixelShift200 dataset 
    Before May 28
