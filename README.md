@@ -1,4 +1,4 @@
-# TENet <a href="https://arxiv.org/abs/1905.02538" target="_blank">[PDF]</a> <a href="https://drive.google.com/drive/folders/1iOopGVTnX1IZIs2XtLZOZjUyNt-tU8BX?usp=sharing">[Checkpoints]</a>
+# TENet <a href="https://arxiv.org/abs/1905.02538" target="_blank">[PDF]</a> <a href="https://drive.google.com/open?id=1FPELQupnGR750EoUWTY_0owkEnlAGVYH">[Checkpoints]</a>
 <!--<a href="https://arxiv.org/abs/1905.02538" target="_blank">[pre-trained models]</a> -->
 <!--<a href="https://arxiv.org/abs/1905.02538" target="_blank">[datasets]</a> -->
 ### Trinity of Pixel Enhancement: a Joint Solution for Demosaicing, Denoising and Super-Resolution
@@ -121,10 +121,11 @@ To be released before May 28.
 
 # Resource Collection
 ### Pretrained models location
-   pre-trained models are available [GoogleDrive](https://drive.google.com/open?id=1k89JnVtxzLj6WRK_jWjo4re6zjnWeIsr) 
+[GoogleDrive](https://drive.google.com/open?id=1FPELQupnGR750EoUWTY_0owkEnlAGVYH) 
+
 
 ### Test Data
-   Test images are available [GoogleDrive](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R).
+[GoogleDrive](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R)
 
 ### PixelShift200 dataset 
    Before May 28
