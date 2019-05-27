@@ -49,7 +49,7 @@ pip install opencv-python scipy scikit-image
     cd TENet
     ```
 2. Place your own **input images** in `$YourInputPath` folder.  You will save output in `$YourSavePath` folder.
-   input images should be Bayer Raw images (pattern is rggb). 
+   input images should be Bayer Raw images (**[bayer pattern](https://en.wikipedia.org/wiki/Bayer_filter) is rggb**). 
    
 3. Run test.
    1. test model trained by synthesis datasets 
@@ -81,7 +81,7 @@ We train our model both on synthesis datasets([DF2k](https://github.com/xinntao/
             ```       
         
     2. PixelShift200 data preparation 
-        1. Download pixelShift200 (to be released soon). They are .mat format, haing 4 channels (R, Gr, Gb, B).
+        1. Download [Pixelshift200](http://guochengqian.com/pixelshift200). They are .mat format, having 4 channels (R, Gr, Gb, B).
         2. Crop images into 512*512, using followed code:
             ```
             python ./dataset/crop_mats.py
