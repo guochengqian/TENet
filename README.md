@@ -1,6 +1,6 @@
 # TENet <a href="https://arxiv.org/abs/1905.02538" target="_blank">[PDF]</a> 
-<!--<a href="https://drive.google.com/open?id=1FPELQupnGR750EoUWTY_0owkEnlAGVYH">[Checkpoints]</a>-->
-<!--<a href="https://arxiv.org/abs/1905.02538" target="_blank">[datasets]</a> -->
+<a href="http://guochengqian.com/pixelshift200">[pixelshift200]</a> 
+
 ### Trinity of Pixel Enhancement: a Joint Solution for Demosaicing, Denoising and Super-Resolution
 By [Guocheng Qian](https://guochengqian.github.io/), [Jinjin Gu](http://www.jasongt.com/), [Jimmy S. Ren](http://www.jimmyren.com/), [Chao Dong](https://scholar.google.com.hk/citations?user=OSDCB0UAAAAJ&hl=en), Furong Zhao, Juan Lin
 
@@ -128,7 +128,7 @@ In this way, the collected images are artifacts-free, which leads to better trai
 
 
 
-Download datsets from [pxielshift200 website](http://guochengqian.com/pixelshift200).
+Download dataset from [pxielshift200 website](http://guochengqian.com/pixelshift200).
 ## Result
 <!--### Results on simulated datasets-->
 
