@@ -141,8 +141,6 @@ def main():
             # if args.vgg_lambda != 0:
             #     vgg_losses.update(vgg_loss.item(), gt.size(0))
 
-
-
             if current_iter % args.print_freq == 0:
                 print('Epoch: [{0}][{1}/{2}]\t'
                       'Iter:{3}\t'

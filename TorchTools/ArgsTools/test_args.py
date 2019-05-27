@@ -19,7 +19,7 @@ class TestArgs():
                             default='/data/sony/datasets_backup/real_test/sr_output', type=str,
                             help='save_path')
         parser.add_argument('--datatype', default='uint8', type=str,
-                            help='post_name')
+                            help='uint8 or uint16')
         parser.add_argument('--shift_x', default=0, type=int,
                             help='shift pixel horizontally')
         parser.add_argument('--shift_y', default=0, type=int,
@@ -55,7 +55,8 @@ class TestArgs():
 
         parser.add_argument('--show_info',action='store_true',
                             help='print information')
-
+        parser.add_argument('--postname',default='', type=str,
+                            help='postname')
 
         self.args = parser.parse_args()
 
@@ -66,11 +67,9 @@ class TestArgs():
             self.args.datatype = np.uint8
 
         if self.args.denoise:
-            # self.args.post = 'sigma'+ str(self.args.sigma)  + '-' + self.args.pretrained_model.split('/')[-1]+ '.png'
-            self.args.post = self.args.model+'_sigma'+str(self.args.sigma) + '.png'
+            self.args.post = self.args.model+'_sigma'+str(self.args.sigma) +'_'+self.args.postname+ '.png'
         else:
-            # self.args.post = self.args.pretrained_model.split('/')[-1] + '.png'
-            self.args.post = self.args.model + '.png'
+            self.args.post = self.args.model+'_'+self.args.postname+'.png'
         return self.args
 
     def print_args(self):

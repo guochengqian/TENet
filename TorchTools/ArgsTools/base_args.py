@@ -17,14 +17,14 @@ class BaseArgs():
         parser.add_argument('--min_noise', default=0.00, type=float, help='noise_level')
 
         parser.add_argument('--batch_size', default=16, type=int, help='mini-batch size (default:8)')
-        parser.add_argument('--patch_size', default=64, type=int, help='height of patch (default: 64)')
+        parser.add_argument('--patch_size', default=256, type=int, help='height of patch (default: 64)')
 
         parser.add_argument('--in_channels', default=1, type=int, help='in_channels')
         parser.add_argument('--gt_channels', default=1, type=int, help='gt_channels')
         parser.add_argument('--get2label', action='store_true',  help='denoise store_true')
 
         # train args
-        parser.add_argument('--total_epochs', default=1000, type=int,
+        parser.add_argument('--total_epochs', default=10000, type=int,
                             help='number of total epochs to run')
         parser.add_argument('--total_iters', default=10000000, type=int,
                             help='number of total epochs to run')

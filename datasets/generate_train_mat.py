@@ -3,8 +3,8 @@ import random
 import pdb
 
 # data_path = '/data/sony/datasets_backup/simulated_datasets/train_df2k/rgb_gt/'
-train_data_path = '/data/pixel-shift-200/PixelShift200/PixelShift200_crop'
-test_data_path = '/data/pixel-shift-200/PixelShift200/PixelShift200_valid'
+train_data_path = '/data/pixel-shift-200/PixelShift200_crop'
+test_data_path = '/data/pixel-shift-200/PixelShift200_valid_crop'
 
 
 train_dst_path = 'train_mat.txt'

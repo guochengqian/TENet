@@ -8,9 +8,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 def main():
     """A multi-thread tool to crop sub imags."""
-    main_folder = '/data/pixel-shift-200/PixelShift200/'
-    input_folder = os.path.join(main_folder, 'PixelShift200_train')
-    select_folder = os.path.join(main_folder, 'PixelShift200_crop')
+    main_folder = '/data/pixel-shift-200/'
+    input_folder = '/data/TENet/PixelShift200/PixelShift200_train'
+    select_folder = os.path.join(main_folder, 'PixelShift200_train_crop')
     waste_folder = os.path.join(main_folder, 'waste_mat')
     img_folder = os.path.join(main_folder, 'img_crop')
     waste_img_folder = os.path.join(main_folder, 'waste_img')
@@ -18,8 +18,8 @@ def main():
     crop_sz = 512
     stride = 512
     thres_sz = 100
-    cont_var_thresh = 0.
-    freq_var_thresh = 0.
+    cont_var_thresh = 0.20
+    freq_var_thresh = 50
 
     if not os.path.exists(select_folder):
         os.makedirs(select_folder)
@@ -84,9 +84,8 @@ def worker(path, select_folder, waste_folder, img_folder, waste_img_folder, crop
             im_gray = patch[:, :, 1]
 
             [mean, var] = cv2.meanStdDev(im_gray)
-            # var = var/mean
-            freq_var = cv2.Laplacian(im_gray, cv2.CV_16U).var()/mean
-
+            var = var/mean
+            freq_var = cv2.Laplacian(im_gray, cv2.CV_16U).mean()
             if var > cont_var_thresh and freq_var>freq_var_thresh:
                 savemat(os.path.join(select_folder, patch_name), {'ps': patch})
                 img_patch = np.delete(patch, 2, 2).astype(float)/(2.**16)

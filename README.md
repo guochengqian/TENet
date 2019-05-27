@@ -14,23 +14,32 @@ Please cite the following paper if you feel TENet is useful to your research
   year={2019}
 }
 ```
-# Resources Collection
-### Pretrained models location
-Before May 28.
-<!--[GoogleDrive](https://drive.google.com/open?id=1FPELQupnGR750EoUWTY_0owkEnlAGVYH) -->
 
-### Test Data
+
+# Resources Collection
+### Pretrained models
+[GoogleDrive](https://drive.google.com/open?id=1FPELQupnGR750EoUWTY_0owkEnlAGVYH) 
+
+### Test data
 [GoogleDrive](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R)
 
 ### PixelShift200 dataset 
-Before May 28
+[Pixelshift200 website](http://guochengqian.com/pixelshift200)
    
+
 ## Quick Test
 ### Dependencies
 - Python >= 3
 - [PyTorch 0.4.1](https://pytorch.org/) (CUDA version >= 7.5 if installing with CUDA. [More details](https://pytorch.org/get-started/previous-versions/))
 - [Tensorflow](https://www.tensorflow.org/install)  (cpu version is enough, only used for visualization in training)
 - Python packages:  `pip install opencv-python scipy scikit-image`
+
+```
+conda create --name pytorch04
+conda activate pytorch04
+conda install pytorch=0.4.1 cuda90 torchvision tensorflow -c pytorch   
+pip install opencv-python scipy scikit-image  
+```
 
 ### Test Models
 1. Clone this github repo.
