@@ -49,7 +49,7 @@ pip install opencv-python scipy scikit-image
     cd TENet
     ```
 2. Place your own **input images** in `$YourInputPath` folder.  You will save output in `$YourSavePath` folder.
-   input images should be Bayer Raw images (**[bayer pattern](https://en.wikipedia.org/wiki/Bayer_filter) is rggb**). 
+   Input images should be Bayer Raw images (**[bayer pattern](https://en.wikipedia.org/wiki/Bayer_filter) is rggb**). 
    
 3. Run test.
    1. test model trained by synthesis datasets 

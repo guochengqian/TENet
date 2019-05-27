@@ -4,6 +4,7 @@ output/
 *ipynb
 .ipynb_checkpoints
 *.pyc
+.gitgnore
 cmp_psnr.py
 cmp_psnr_dn.py
 ablation_study.py
