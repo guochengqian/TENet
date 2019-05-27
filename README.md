@@ -54,7 +54,7 @@ pip install opencv-python scipy scikit-image
 3. Run test.
    1. test model trained by synthesis datasets 
         ```
-        sh ./script/test_tennet2-dn.sh  
+        sh ./script/test_tennet2-dn-df2k.sh  
         ```  
  
    2. test model trained by PixelShift200 datasets
@@ -94,7 +94,7 @@ We train our model both on synthesis datasets([DF2k](https://github.com/xinntao/
 2. Train model on synthesis dataset
     
     ```
-    sh script/run_tenet2-dn.sh
+    sh script/run_tenet2-dn-df2k.sh
     ```
 
 3. Train model on PixelShift200 dataset
