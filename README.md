@@ -23,7 +23,7 @@ Please cite the following paper if you feel TENet is useful to your research
 [GoogleDrive](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R)
 
 ### PixelShift200 dataset 
-[Pixelshift200 website](http://guochengqian.com/pixelshift200)
+[Pixelshift200 website](http://gcqian.com/pixelshift200)
    
 
 ## Quick Test
@@ -127,7 +127,7 @@ In this way, the collected images are artifacts-free, which leads to better trai
 
 
 
-Download dataset from [pxielshift200 website](http://guochengqian.com/pixelshift200).
+Download dataset from [pxielshift200 website](http://gcqian.com/pixelshift200).
 ## Result
 <!--### Results on simulated datasets-->
 
