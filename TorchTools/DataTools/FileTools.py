@@ -151,4 +151,25 @@ def _pil2cv(img):
         return im
 
 
+def save_image_tensor2cv2(input_tensor: torch.Tensor, filename):
+    """
+    Save tensor to cv2 format
+         :param input_tensor: tensor to save
+         :param filename: saved file name
+    """
+    assert (len(input_tensor.shape) == 4 and input_tensor.shape[0] == 1)
+    # Make a copy
+    input_tensor = input_tensor.clone().detach()
+    # To cpu
+    input_tensor = input_tensor.to(torch.device('cpu'))
+    # Denormalization
+    # input_tensor = unnormalize(input_tensor)
+    # Remove batch dimension
+    input_tensor = input_tensor.squeeze()
+    # Convert from [0,1] to [0,255], then from CHW to HWC, and finally to cv2
+    input_tensor = input_tensor.mul_(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).type(torch.uint8).numpy()
+    # RGB to BRG
+    input_tensor = cv2.cvtColor(input_tensor, cv2.COLOR_RGB2BGR)
+    cv2.imwrite(filename, input_tensor)
+
 

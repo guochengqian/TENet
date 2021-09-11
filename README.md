@@ -1,140 +1,183 @@
 # TENet <a href="https://arxiv.org/abs/1905.02538" target="_blank">[PDF]</a> <a href="http://gcqian.com/project/pixelshift200">[pixelshift200]</a> 
 
-### Trinity of Pixel Enhancement: a Joint Solution for Demosaicing, Denoising and Super-Resolution
-By [Guocheng Qian](https://guochengqian.github.io/), [Jinjin Gu](http://www.jasongt.com/), [Jimmy S. Ren](http://www.jimmyren.com/), [Chao Dong](https://scholar.google.com.hk/citations?user=OSDCB0UAAAAJ&hl=en), Furong Zhao, Juan Lin
+### Rethink the Pipeline of Demosaicking, Denoising, and Super-resolution
+By [Guocheng Qian](https://guochengqian.github.io/), [Yuanhao Wang](https://github.com/yuanhaowang1213), Chao Dong, [Jimmy S. Ren](http://www.jimmyren.com/), Wolfgang Heidrich, Bernard Ghanem, [Jinjin Gu](http://www.jasongt.com/)
+
+The original name of this project is: "Trinity of Pixel Enhancement: a Joint Solution for Demosaicking, Denoising and Super-Resolution"
+
+
+
+## pipeline DN -> SR -> DM
+
+![pipeline](/home/qiang/codefiles/low_level/ISP/TENet_new/misc/pipeline_result.png)
+
+## TENet
+
+We insert the proposed pipeline DN -> SR -> DM into an end-to-end network constructed by RRDB for the joint DN, DM and SR. We leverage the detachable branch to provide the middle stage supervision. 
+
+<p align="center">
+  <img height="300" src="misc/Network.png">
+</p>
+
+
+## PixelShift200 dataset
+
+![pixelshift](/home/qiang/codefiles/low_level/ISP/TENet_new/misc/PixelShift.png)
+
+
+
+## Resources
+
+* pretrained models
+* Pixelshift200: 
+* Real-shot raw images:
+
+Will be available soon. 
+
+
+
+
+
+### Enviroment installnation
+
+Clone this github repo and install the environment by:
+
+```shell
+git clone https://github.com/guochengqian/TENet
+cd TENet
+source env_install.sh
+conda activate tenet
+```
+
+
+
+### Data preparation
+
+1. synthetic data preparation
+
+   1. Download ([DIV2K](https://drive.google.com/file/d/1vXPPr2hVaMewz2JA1lFfI5uHB4ENwRXQ/view?usp=sharing)) dataset
+
+   2. create data directory in TENet folder: `mkdir data && cd data`
+
+   3. Link DIV2K data into ./data/DIV2K, e.g. `ln -s /data/lowlevel/DIV2K ./` 
+
+   4. Crop DIV2K
+
+      ```bash
+      cd ../datasets
+      python crop_imgs.py --src_dir ../data/DIV2K/DIV2K_val5_HR --save_dir ../data/DIV2K/DIV2K_val5_HR_sub # crop val5 images
+      python generate_datalist_div2k.py  # generate div2k training and val dataset
+      ```
+      
+The generated .txt file  `train_div2k.txt` and `val_div2k.txt` are used for training on DIV2K.     
+   
+2. PixelShift200 data preparation 
+
+   1. Download [Pixelshift200]. They are .mat format, having 4 channels (R, Gr, Gb, B). Unzip the .zip file and put all folders inside into one folder called pixelshift200. For example, put here `/data/pixelshift200`. 
+
+   3. Link PixelShift200 data into ./data/pixelshift200, e.g. `cd TENet/data && ln -s /data/pixelshift200 pixelshift200` 
+
+   4. Crop images into 512*512, and generate the text file contains the location of each image:
+
+      ```shell
+   cd ../datasets
+      python crop_pixelshift200.py 
+      python generate_datalist_pixelshift.py 
+      ```
+   
+      The generated .txt file  `train_pixelshift.txt` (9444 Lines) and `val_pixelshift.txt` (20 Lines) are used for training. check them. 
+
+      
+
+ 
+
+## Training
+#### Train  joint  models: 
+
+* DN+DM+SR (end to end without pipeline)
+
+  ```shell
+  python train.py --in_type noisy_lr_raw --mid_type None --out_type linrgb --model tenet --train_list datasets/train_pixelshift.txt --val_list datasets/val_pixelshift.txt --n_gpus 4  --use_wandb --block_type rrdb --n_blocks 6 --imgs_per_gpu 8
+  ```
+
+* DN+SR->DM (our TENet)
+
+  ```SHELL
+  python train.py --in_type noisy_lr_raw --mid_type raw --out_type linrgb --model tenet --train_list datasets/train_pixelshift.txt --val_list datasets/val_pixelshift.txt --n_gpus 4  --use_wandb --block_type rrdb  --n_blocks 6  --imgs_per_gpu 8
+  ```
+
+  Note: 
+
+  1.  `--mid_type raw` is to activate the auxiliary mid stage supervision. Here we add `raw` as the supervision, therefore, the pipeline will be DN+SR->DM.
+
+  2.  for training on a different dataset, like DIV2K, change `--train_list datasets/train_div2k.txt --val_list datasets/val_div2k.txt` 
+
+  3.  for using a different building block, such as NLSA `--block_type nlsa`, or EAM `--block_type eam` , or RRG `--block_type rrg`, or DRLM `--block_type drlm` or RRDB `--block_type rrdb`
+
+  4.  Monitor your jobs using Tensorboard (log saved in ./log folder by default, `tensorboard --logdir=./ ` ) or using wandb (online website) by set `--use_wandb`. 
+
+
+
+#### Train sequential models: 
+
+```shell
+# RawDN
+python train.py --in_type noisy_raw --out_type raw --model resnet --train_list datasets/train_pixelshift.txt --val_list datasets/val_pixelshift.txt --n_gpus 4  --use_wandb --block_type rrdb --n_blocks 6
+
+# RawSR
+python train.py --in_type lr_raw --out_type raw --model resnet --train_list datasets/train_pixelshift.txt --val_list datasets/val_pixelshift.txt --n_gpus 4  --use_wandb --block_type rrdb --n_blocks 6
+
+# DM
+python train.py --in_type raw --out_type linrgb --model resnet --train_list datasets/train_pixelshift.txt --val_list datasets/val_pixelshift.txt --n_gpus 4  --use_wandb --block_type rrdb --n_blocks 6
+
+# RGBDN
+python train.py --in_type noisy_linrgb --out_type linrgb --model resnet --train_list datasets/train_pixelshift.txt --val_list datasets/val_pixelshift.txt --n_gpus 4  --use_wandb --block_type rrdb --n_blocks 6
+
+# RGBSR
+python train.py --in_type lr_linrgb --out_type linrgb --model resnet --train_list datasets/train_pixelshift.txt --val_list datasets/val_pixelshift.txt --n_gpus 4  --use_wandb --block_type rrdb --n_blocks 6
+```
+
+
+
+
+### Train SOTA models
+* JDSR
+  ```SHELL
+  python train.py --in_type noisy_lr_raw --mid_type None --out_type linrgb --model jdsr --train_list datasets/train_pixelshift.txt --val_list datasets/val_pixelshift.txt --n_gpus 4  --use_wandb --block_type res --n_blocks 12 --channels 256
+  ```
+
+* JDnDmSR
+
+  ```SHELL
+  python train.py --in_type noisy_lr_raw --mid_type lr_raw --out_type linrgb --model jdndmsr --scale 2 --train_list datasets/train_pixelshift.txt --val_list datasets/val_pixelshift.txt --n_gpus 4 --n_blocks 2 --block rcab
+  ```
+
+
+
+## Testing
+
+```shell
+bash script_all_pipelines.sh 
+# this script supports evaluation on all benchmarking datasets as well as the real-shot images for all possible pipelines
+```
+
+Note: for the real shot images testing, you have to:
+
+1.  save the real-shot image as a readable raw image (like in .RAW, .ARW, .DNG format).  For example,  we use Lightroom mobile version to shot images on iPhone and save the photo in .DNG format.
+2. Read the general metadata using RawPy and read the noise profiling metadata using [Jeffrey's Image Metadata Viewer](http://exif.regex.info/exif.cgi) or [metapicz](http://metapicz.com/). 
+
+
 
 ### Citation 
+
 Please cite the following paper if you feel TENet is useful to your research
+
 ```
 @article{qian2019trinity,
-  title={Trinity of Pixel Enhancement: a Joint Solution for Demosaicking, Denoising and Super-Resolution},
-  author={Qian, Guocheng and Gu, Jinjin and Ren, Jimmy S and Dong, Chao and Zhao, Furong and Lin, Juan},
+  title={Rethink the Pipeline of Demosaicking, Denoising, and Super-resolution},
+  author={Qian, Guocheng and Wang, Yuanhao and Dong, Chao and Ren, Jimmy S and Heidrich, Wolfgang and Ghanem, Bernard and Gu, Jinjin},
   journal={arXiv preprint arXiv:1905.02538},
   year={2019}
 }
 ```
-
-
-# Resources Collection
-### Pretrained models
-[GoogleDrive](https://drive.google.com/open?id=1FPELQupnGR750EoUWTY_0owkEnlAGVYH) 
-
-### Test data
-[GoogleDrive](https://drive.google.com/open?id=1PtpOo7U-J-IuttZHeduE5ZyHlMW-7s1R)
-
-### PixelShift200 dataset 
-[Pixelshift200 website](http://gcqian.com/project/pixelshift200)
-   
-
-## Quick Test
-### Dependencies
-- Python >= 3
-- [PyTorch 0.4.1](https://pytorch.org/) (CUDA version >= 7.5 if installing with CUDA. [More details](https://pytorch.org/get-started/previous-versions/))
-- [Tensorflow](https://www.tensorflow.org/install)  (cpu version is enough, only used for visualization in training)
-- Python packages:  `pip install opencv-python scipy scikit-image`
-
-```
-conda create --name pytorch04
-conda activate pytorch04
-conda install pytorch=0.4.1 cuda90 torchvision tensorflow -c pytorch   
-pip install opencv-python scipy scikit-image  
-```
-
-### Test Models
-1. Clone this github repo.
-
-    ```
-    git clone https://github.com/guochengqian/TENet
-    cd TENet
-    ```
-2. Place your own **input images** in `$YourInputPath` folder.  You will save output in `$YourSavePath` folder.
-   Input images should be Bayer Raw images (**[bayer pattern](https://en.wikipedia.org/wiki/Bayer_filter) is rggb**). 
-   
-3. Run test.
-   1. test model trained by synthesis datasets 
-        ```
-        sh ./script/test_tennet2-dn-df2k.sh  
-        ```  
- 
-   2. test model trained by PixelShift200 datasets
-        ```
-        sh ./script/test_tenet2-dn-ps200.sh  
-        ```  
-        Don't forget to change $YourInputPath and $YourSavePath in .sh file.
-
-
-## How to Train
-We train our model both on synthesis datasets([DF2k](https://github.com/xinntao/BasicSR)) and our proposed full color sampled real word
-4k dataset PixelShift200 (to be released soon).
-
-1. Data preparation
-    1. Synthesis data preparation
-        1. Download ([DF2k](https://github.com/xinntao/BasicSR)) dataset, which is a combination dataset of DIV2K and Flickr2K
-        2. Crop images into resolution 256*256, using followed code:
-            ```
-            python ./dataset/crop_images.py
-            ```
-        3. generate txt file used for training
-            ```
-            python ./dataset/generate_train_df2k.py
-            ```       
-        
-    2. PixelShift200 data preparation 
-        1. Download [Pixelshift200](http://guochengqian.com/pixelshift200). They are .mat format, having 4 channels (R, Gr, Gb, B).
-        2. Crop images into 512*512, using followed code:
-            ```
-            python ./dataset/crop_mats.py
-            ```
-        3. generate txt file used for training
-            ```
-            python ./dataset/generate_train_mat.py
-            ```
-                         
-2. Train model on synthesis dataset
-    
-    ```
-    sh script/run_tenet2-dn-df2k.sh
-    ```
-
-3. Train model on PixelShift200 dataset
-    ```
-    sh script/run_tenet2-dn-ps200.sh    
-    ```
-
-
-## TENet
-
-Our approach can be divided into two parts, the first part is a mapping of joint denoising and SR, 
-and the second part converts the SR mosaic image into a full color image.
-The two parts can be trained and performed jointly.
-The network structure is illustrated as follows.
-
-<p align="center">
-  <img height="300" src="figures/Network.png">
-</p>
-
-
-
-## PixelShift200 dataset
-We employ advanced pixel shift technology to perform a full color sampling of the image.
-Pixel shift technology takes four samples of the same image, and physically controls the camera sensor to move one pixel horizontally or vertically at each sampling to capture all color information at each pixel.
-The pixel shift technology ensures that the sampled images follow the distribution of natural images sampled by the camera, and the full information of the color is completely obtained.
-In this way, the collected images are artifacts-free, which leads to better training results for demosaicing related tasks.
-
-<p align="center">
-  <img height="200" src="figures/PixelShift.png">
-</p>  
-
-
-
-Download dataset from [pxielshift200 website](http://gcqian.com/project/pixelshift200).
-## Result
-<!--### Results on simulated datasets-->
-
-
-### Results on Real Images
-<p align="center">
-  <img width="800" src="figures/Surf.png">
-</p>
-
 

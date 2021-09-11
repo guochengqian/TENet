@@ -1,0 +1,3 @@
+[submodule "bicubic_pytorch"]
+	path = bicubic_pytorch
+	url = https://github.com/thstkdgus35/bicubic_pytorch

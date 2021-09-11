@@ -1,180 +1,127 @@
 import os
 import argparse
+import h5py
+import numpy as np
 import importlib
 import torch
-import numpy as np
-from TorchTools.ArgsTools.test_args import TestArgs
-from TorchTools.DataTools.FileTools import _tensor2cvimage, _all_images, _read_image
-from model.common import DownsamplingShuffle
-import cv2
-from model.common import print_model_parm_nums
-# import pdb
-import torch.nn as nn
+from torchvision import transforms, utils
+import torchvision.transforms.functional as TF
+from TorchTools.model_util import load_pretrained_models
+from TorchTools.ArgsTools.base_args import BaseArgs
+from datasets import process
+from model.common import cal_model_parm_nums
+
 
 def main():
-    ##############################################################################
-    # args parse
-    parser = argparse.ArgumentParser(description='PyTorch implementation of demosaicking')
-    parsers = TestArgs()
-    args = parsers.initialize(parser)
-    if args.show_info:
-        parsers.print_args()
-
-    ##############################################################################
-    # load model architecture
     print('===> Loading the network ...')
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     module = importlib.import_module("model.{}".format(args.model))
-    model = module.NET(args).to(device)
+    model = module.NET(args).to(args.device)
+    print(model)
+    model_size = cal_model_parm_nums(model)
+    print('Number of params: %.4f Mb' % (model_size / 1e6))
 
-    if args.show_info:
-        print(model)
-        print_model_parm_nums(model)
-
-    ##############################################################################
     # load pre-trained
-    if os.path.isfile(args.pretrained_model):
-        print("=====> loading checkpoint '{}".format(args.pretrained_model))
-        checkpoint = torch.load(args.pretrained_model)
-        best_psnr = checkpoint['best_psnr']
-        model.load_state_dict(checkpoint['state_dict'])
-        print("The pretrained_model is at checkpoint {}k, and it's best loss is {}."
-              .format(checkpoint['iter']/1000, best_psnr))
-    else:
-        print("=====> no checkpoint found at '{}'".format(args.pretrained_model))
+    model, _, _ = load_pretrained_models(model, args.pretrain)
 
-    ##############################################################################
-    # in channels, out channels
-    if args.model == 'denorgb':
-        in_channels = 3
-        out_channels = 3
-    elif args.model == 'denoraw':
-        in_channels = 4
-        out_channels = 1
-    elif args.model == 'demo':
-        in_channels = 4
-        out_channels = 3
-    elif args.model == 'srraw':
-        in_channels = 4
-        out_channels = 1
-    elif args.model == 'srrgb':
-        in_channels = 3
-        out_channels = 3
-    elif args.model == 'tenet1':
-        in_channels = 4
-        out_channels = 3
-    elif args.model == 'tenet2':
-        in_channels = 4
-        out_channels = 3
-    else:
-        raise ValueError('not supported model')
+    # test DnD dataset
+    # Loads image information and bounding boxes.
+    info = h5py.File(os.path.join(args.test_data, 'info.mat'), 'r')['info']
+    bb = info['boundingboxes']
 
-    ##############################################################################
-    # test
-    model.eval()
-    raw_down_sample = DownsamplingShuffle(2)
-    demosaic_layer = nn.PixelShuffle(2)
+    rgb2xyz = torch.FloatTensor([[0.4124564, 0.3575761, 0.1804375],
+                                 [0.2126729, 0.7151522, 0.0721750],
+                                 [0.0193339, 0.1191920, 0.9503041]])
+    # Denoise each image.
+    for i in range(0, 50):
+        # Loads the noisy image.
+        filename = os.path.join(args.test_data, 'images_raw', '%04d.mat' % (i + 1))
+        print('Processing file: %s' % filename)
+        with h5py.File(filename, 'r') as img:
+            noisy = np.float32(np.array(img['Inoisy']).T)
 
-    # for dataset in os.listdir(args.test_path):
-    img_path = os.path.join(args.test_path)
-    dst_path = os.path.join(args.save_path)
-    if not os.path.exists(dst_path):
-        os.makedirs(dst_path)
+        # Loads raw Bayer color pattern.
+        bayer_pattern = np.asarray(info[info['camera'][0][i]]['pattern']).tolist()
+        # Load the camera's (or image's) ColorMatrix2
+        xyz2cam = torch.FloatTensor(np.reshape(np.asarray(info[info['camera'][0][i]]['ColorMatrix2']), (3, 3)))
+        # Multiplies with RGB -> XYZ to get RGB -> Camera CCM.
+        rgb2cam = torch.mm(xyz2cam, rgb2xyz)
+        # Normalizes each row.
+        rgb2cam = rgb2cam / torch.sum(rgb2cam, dim=-1, keepdim=True)
+        cam2rgb = torch.inverse(rgb2cam)
 
-    im_files = _all_images(img_path)
+        # Specify red and blue gains here (for White Balancing)
+        asshotneutral = info[info['camera'][0][i]]['AsShotNeutral']
+        red_gain = torch.FloatTensor(asshotneutral[1] / asshotneutral[0])
+        blue_gain = torch.FloatTensor(asshotneutral[1] / asshotneutral[2])
 
-    with torch.no_grad():
-        for i in range(len(im_files)):
-            im_file = im_files[i]
-            paths = im_file.split('/')
-            im_name = paths[-1]
+        ccm = torch.unsqueeze(cam2rgb, dim=0)
+        red_g = torch.unsqueeze(red_gain, dim=0)
+        blue_g = torch.unsqueeze(blue_gain, dim=0)
 
-            img = _read_image(im_file)
+        # Denoise each bounding box in this image.
+        boxes = np.array(info[bb[0][i]]).T
+        for k in range(20):
+            # Crops the image to this bounding box.
+            idx = [
+                int(boxes[k, 0] - 1),
+                int(boxes[k, 2]),
+                int(boxes[k, 1] - 1),
+                int(boxes[k, 3])
+            ]
+            noisy_crop = noisy[idx[0]:idx[1], idx[2]:idx[3]].copy()
 
-            # shift images. assure that bayer pattern is: rggb
-            if args.shift_x > 0:
-                img = np.concatenate((img[:, 1:], img[:, -2:-1]), 1)
-            if args.shift_y > 0:
-                img = np.concatenate((img[1:], img[-2:-1]), 0)
-
-            h = img.shape[0]
-            w = img.shape[1]
-            # if input is raw, assure img size is multipliers of 2
-            if in_channels == 4:
-                if h%2 != 0 or w%2 !=0:
-                    h = h - h%2
-                    w = w - w%2
-                    img = img[:, :, 0:h, 0:w]
-
-                img = torch.from_numpy(img).float().contiguous().view(-1, 1, h, w)
-                img = raw_down_sample(img)
+            # Flips the raw image to ensure RGGB Bayer color pattern.
+            if bayer_pattern == [[1, 2], [2, 3]]:
+                pass
+            elif bayer_pattern == [[2, 1], [3, 2]]:
+                noisy_crop = np.fliplr(noisy_crop)
+            elif bayer_pattern == [[2, 3], [1, 2]]:
+                noisy_crop = np.flipud(noisy_crop)
             else:
-                img = torch.from_numpy(np.transpose(img, [2, 0, 1])).float()
-                img = img.contiguous().view(-1, 3, h, w)
+                print('Warning: assuming unknown Bayer pattern is RGGB.')
 
-            if args.denoise:
-                noise_map = torch.ones([1, 1, img.shape[-2], img.shape[-1]])*args.noise_level
-                img = torch.cat((img, noise_map), 1)
+            # Loads shot and read noise factors.
+            nlf_h5 = info[info['nlf'][0][i]]
+            shot_noise = nlf_h5['a'][0][0]
+            read_noise = nlf_h5['b'][0][0]
 
-            im_inputs = crop_imgs(img, args.crop_scale)
-            del img
+            # Extracts each Bayer image plane.
+            height, width = noisy_crop.shape
+            noisy_bayer = []
+            for yy in range(2):
+                for xx in range(2):
+                    noisy_crop_c = noisy_crop[yy:height:2, xx:width:2].copy()
+                    noisy_bayer.append(noisy_crop_c)
+            noisy_bayer = np.stack(noisy_bayer, axis=-1)
+            variance = shot_noise * noisy_bayer + read_noise
 
-            im_inputs = im_inputs.to(device)
-            h = im_inputs.shape[-2]
-            w = im_inputs.shape[-1]
+            raw_image_in = torch.unsqueeze(TF.to_tensor(noisy_bayer), dim=0).to(torch.float).cuda()
+            raw_image_var = torch.unsqueeze(TF.to_tensor(variance), dim=0).to(torch.float).cuda()
 
-            output = torch.zeros((args.crop_scale ** 2, 1, out_channels, h*args.scale*2, w*args.scale*2))
-
-            for j in range(args.crop_scale ** 2):
-                if args.model == 'tenet2':
-                    sr = model(im_inputs[j].unsqueeze(0))[1]
+            # Image ISP Here
+            model.eval()
+            with torch.no_grad():
+                if 'noisy' in args.in_type:
+                    model_input = torch.cat((raw_image_in, raw_image_var), dim=1)
                 else:
-                    sr = model(im_inputs[j].unsqueeze(0))
+                    model_input = raw_image_in
+                model_out = model(model_input)
 
-                sr = torch.clamp(sr.cpu(), min=0., max=1.)
-                output[j] = sr
+            noisy_bayer = raw_image_in.cpu()
+            model_out = model_out.cpu()
 
-            if args.crop_scale > 1:
-                rgb_output = binning_imgs(output, args.crop_scale)
-            else:
-                rgb_output = output.view(1, output.shape[-3], output.shape[-2], output.shape[-1])
+            # Post-Processing for saving the results
+            noisy_rgb = process.raw2srgb(noisy_bayer, red_g, blue_g, ccm)
+            if 'raw' in args.out_type:
+                denoised_rgb = process.raw2srgb(model_out, red_g, blue_g, ccm)
+            elif 'linrgb' in args.out_type:
+                denoised_rgb = process.rgb2srgb(model_out, red_g, blue_g, ccm)
 
-            if out_channels == 4:
-                rgb_output = demosaic_layer(rgb_output)
-
-            rgb_output = _tensor2cvimage(rgb_output, np.uint8)
-
-            im_name = im_name.split('.')[0] + '-'+args.post
-            # pdb.set_trace()
-            cv2.imwrite(os.path.join(dst_path, im_name), rgb_output)
-            if args.show_info:
-                print('saving: {}, size: {} [{}]/[{}]'.format(os.path.join(dst_path, im_name),
-                                                              rgb_output.shape, i, len(im_files)-1))
-
-
-def crop_imgs(img, ratio):
-    # if Run out of CUDA memory, you can crop images to small pieces by this function. Just set --crop_scale 4
-    b, c, h, w = img.shape
-    h_psize = h // ratio
-    w_psize = w // ratio
-    imgs = torch.zeros(ratio ** 2, c, h_psize, w_psize)
-
-    for i in range(ratio):
-        for j in range(ratio):
-            imgs[i * ratio + j] = img[0, :, i * h_psize:(i + 1) * h_psize, j * w_psize:(j + 1) * w_psize]
-    return imgs
-
-
-def binning_imgs(img, ratio):
-    n, b, c, h, w = img.shape
-    output = torch.zeros((b, c, h * ratio, w * ratio))
-
-    for i in range(ratio):
-        for j in range(ratio):
-            output[:, :, i * h:(i + 1) * h, j * w:(j + 1) * w] = img[i * ratio + j]
-    return output
+            utils.save_image(noisy_rgb, os.path.join(args.save_dir, '%04d_%02d_noisy.png' % (i + 1, k + 1)))
+            utils.save_image(denoised_rgb, os.path.join(args.save_dir, '%04d_%02d_%s.png' % (i + 1, k + 1, args.model)))
 
 
 if __name__ == '__main__':
-     main()
-
+    parser = argparse.ArgumentParser(description='PyTorch implementation of ISP-Net')
+    args = BaseArgs(parser).args
+    main()

@@ -2,505 +2,519 @@ import numpy as np
 import torch
 import torch.utils.data as data
 import random
+import h5py
 from scipy.io import loadmat
-from TorchTools.DataTools.Prepro import rgb2raw, data_aug, rggb_prepro
+from TorchTools.DataTools.Prepro import aug_img, aug_img_np, crop_img, crop_img_np, downsample_tensor, rggb_prepro
 from model.common import DownsamplingShuffle
-import torch.nn.functional as F
-import cv2
+import torchvision.transforms.functional as TF
+from torchvision import transforms
+from PIL import Image
+from datasets import unprocess, process
+from datasets.unprocess import mosaic
+from tqdm import tqdm
 
 
 class LoadPixelShiftData(data.Dataset):
     """
     load training simulated datasets
-
     """
-    def __init__(self, data_list, patch_size=64, scale=2, denoise=False, max_noise=0.0748, min_noise=0.0,
-                 downsampler='avg', get2label=False):
+
+    def __init__(self,
+                 data_list,
+                 phase='train',
+                 patch_size=64,
+                 downsampler='bic', scale=2,
+                 in_type='noisy_lr_raw',
+                 mid_type='raw',  # or None
+                 out_type='rgb',
+                 bit=14):
         super(LoadPixelShiftData, self).__init__()
+        self.phase = phase
         self.scale = scale
         self.patch_size = patch_size
-        self.data_lists = []
-        self.denoise = denoise
-        self.max_noise = max_noise
-        self.min_noise = min_noise
         self.downsampler = downsampler
         self.raw_stack = DownsamplingShuffle(2)
-        self.get2label = get2label
+        self.in_type = in_type
+        self.mid_type = mid_type
+        self.out_type = out_type
+        self.bit = bit
+
         # read image list from txt
-        fin = open(data_list)
-        lines = fin.readlines()
-        for line in lines:
-            line = line.strip().split()
-            self.data_lists.append(line[0])
-        fin.close()
+        self.data_lists = []
+        with open(data_list, 'r') as fin:
+            lines = fin.readlines()
+            for line in tqdm(lines, desc='loading the {}'.format(data_list)):
+                line = line.strip().split()
+                self.data_lists.append(line[0])
 
     def __len__(self):
         return len(self.data_lists)
 
     def __getitem__(self, index):
         # read images, crop size
-        rggb = np.asarray(loadmat(self.data_lists[index])['ps']).astype(np.float32)/65535.
-        rggb = data_aug(rggb, mode=np.random.randint(0, 8))
-        h, w, c = rggb.shape
 
-        lr_raw, raw, rgb = rggb_prepro(rggb.copy(), self.scale)
+        # Note: RGGB is not RAW, it is a Full color sampled image.
+        # (compose: Red, Green_red, Green_blue and blue channel);
+        if self.phase == 'train':
+            # for training dataset, the mat version if 4 (reads with scipy)
+            matfile = loadmat(self.data_lists[index])
+            rggb = np.asarray(matfile['raw']).astype(np.float32) / (2 ** self.bit - 1)
+        else:
+            # for testing dataset, the mat version if 7.3 (reads with h5py)
+            with h5py.File(self.data_lists[index], 'r') as matfile:
+                rggb = np.asarray(matfile['raw']).astype(np.float32) / (2 ** self.bit - 1)
+                rggb = np.transpose(rggb, (2, 1, 0))
+                matainfo = matfile['metadata']
+                matainfo = {'colormatrix': np.transpose(matainfo['colormatrix']),
+                            'red_gain': matainfo['red_gain'],
+                            'blue_gain': matainfo['blue_gain']
+                            }
+                ccm, red_g, blue_g = process.metadata2tensor(matainfo)
+                metadata = {'ccm': ccm, 'red_gain': red_g, 'blue_gain': blue_g}
 
-        # crop gt, keep even
-        wi = random.randint(0, w - self.patch_size)
-        hi = random.randint(0, h - self.patch_size)
-        wi = wi - wi%(self.scale*2)
-        hi = hi - hi%(self.scale*2)
-        # wi, hi, start point in gt
-        # in order to make rggb pattern, hi, hi must be
+        rggb = crop_img_np(rggb, self.patch_size, center_crop=self.phase != 'train')  # in PIL
+        linrgb = np.stack((rggb[:, :, 0], np.mean(rggb[:, :, 1:3], axis=-1), rggb[:, :, 3]), axis=2)
 
-        rgb = rgb[:, hi: hi + self.patch_size, wi: wi + self.patch_size]
-        lr_raw = lr_raw[:, hi//self.scale: hi//self.scale + self.patch_size//self.scale,
-                 wi//self.scale: wi//self.scale + self.patch_size//self.scale]
-        lr_raw = lr_raw.view(1, 1, lr_raw.shape[-2], lr_raw.shape[-1])
-        lr_raw = self.raw_stack(lr_raw)
+        if self.phase == 'train':
+            linrgb = aug_img_np(linrgb, random.randint(0, 7))
+        linrgb = TF.to_tensor(linrgb)
+        linrgb = torch.clamp(linrgb, 0., 1.)
 
-        if self.denoise:
-            noise_level = max(self.min_noise, np.random.rand(1)*self.max_noise)[0]
+        data = {'linrgb': linrgb.clone()}
+        if 'lr' in self.in_type:
+            lr_linrgb = downsample_tensor(linrgb, scale=self.scale, downsampler=self.downsampler)
+            lr_linrgb = torch.clamp(lr_linrgb, 0., 1.)
+            data.update({'lr_linrgb': lr_linrgb.clone()})
 
-            # raw_input + noise
-            noise = torch.randn([1, 1, self.patch_size//self.scale, self.patch_size//self.scale]).mul_(noise_level)
-            lr_raw = lr_raw + self.raw_stack(noise)
+        # ---------------------------------
+        # unprocess step
+        # if raw, lin is in in_type, mean we need an unprocess
+        if 'raw' in self.in_type:
+            raw = unprocess.mosaic(linrgb)
+            data.update({'raw': raw.clone()})
 
-            # cat noise_map
-            noise_map = torch.ones([1, 1, self.patch_size//(2*self.scale), self.patch_size//(2*self.scale)])*noise_level
-            lr_raw = torch.cat((lr_raw, noise_map), 1)
+            if 'lr' in self.in_type:
+                lr_raw = unprocess.mosaic(lr_linrgb)
+                data.update({'lr_raw': lr_raw.clone()})
 
+        if 'noisy' in self.in_type:
+            shot_noise, read_noise = unprocess.random_noise_levels()
+            if 'raw' in self.in_type:  # add noise to the bayer raw image and denoise it
+                if 'lr' in self.in_type:
+                    # Approximation of variance is calculated using noisy image (rather than clean
+                    # image), since that is what will be avaiable during evaluation.
+                    noisy_lr_raw = unprocess.add_noise(lr_raw, shot_noise, read_noise)
+                    variance = shot_noise * noisy_lr_raw + read_noise
+                    data.update({'noisy_lr_raw': noisy_lr_raw.clone(), 'variance': variance.clone()})
+                else:
+                    noisy_raw = unprocess.add_noise(raw, shot_noise, read_noise)
+                    variance = shot_noise * noisy_raw + read_noise
+                    data.update({'noisy_raw': noisy_raw.clone(), 'variance': variance.clone()})
 
-        data = {}
-        data['input'] = torch.clamp(lr_raw, 0., 1.)[0]
-        data['gt'] = torch.clamp(rgb, 0., 1.)
-        if self.get2label:
-            raw = raw[:, hi: hi + self.patch_size, wi: wi + self.patch_size]
-            data['raw_gt'] = torch.clamp(raw, 0., 1.)
+            elif 'linrgb' in self.in_type:  # also add noise on raw but denoise on RGB.
+                if 'lr' in self.in_type:
+                    noisy_lr_linrgb = unprocess.add_noise(lr_linrgb, shot_noise, read_noise)
+                    variance = shot_noise * noisy_lr_linrgb + read_noise
+                    data.update({'noisy_lr_linrgb': noisy_lr_linrgb.clone(), 'variance': variance.clone()})
+                else:
+                    noisy_linrgb = unprocess.add_noise(linrgb, shot_noise, read_noise)
+                    variance = shot_noise * noisy_linrgb + read_noise
+                    data.update({'noisy_linrgb': noisy_linrgb.clone(), 'variance': variance.clone()})
 
-        return data
+        # Here return the data we need
+        in_data = {self.in_type: data[self.in_type]}
+        in_data.update({self.out_type: data[self.out_type]})
+        if 'noisy' in self.in_type:
+            in_data.update({'variance': data['variance']})
+        if self.mid_type is not None:
+            in_data.update({self.mid_type: data[self.mid_type]})
+        if self.phase != 'train':
+            in_data.update({'metadata': metadata})
+        del data
+        return in_data
 
 
 class LoadSimData(data.Dataset):
     """
     load training simulated datasets
-
     """
-    def __init__(self, data_list, patch_size=64, scale=2, denoise=False, max_noise=0.0748, min_noise=0.0,
-                 downsampler='avg', get2label=False):
+
+    def __init__(self,
+                 data_list,
+                 phase='train',
+                 patch_size=64,
+                 downsampler='bic', scale=2,
+                 in_type='noisy_lr_raw',
+                 mid_type='raw',  # or None
+                 out_type='rgb',
+                 ):
         super(LoadSimData, self).__init__()
+        self.phase = phase
         self.scale = scale
         self.patch_size = patch_size
-        self.data_lists = []
-        self.denoise = denoise
-        self.max_noise = max_noise
-        self.min_noise = min_noise
         self.downsampler = downsampler
         self.raw_stack = DownsamplingShuffle(2)
-        self.get2label = get2label
+        self.in_type = in_type
+        self.mid_type = mid_type
+        self.out_type = out_type
+
         # read image list from txt
-        fin = open(data_list)
-        lines = fin.readlines()
-        for line in lines:
-            line = line.strip().split()
-            self.data_lists.append(line[0])
-        fin.close()
-
-    def __len__(self):
-        return len(self.data_lists)
-
-    def __getitem__(self, index):
-        # read images, crop size
-        rgb = cv2.cvtColor(cv2.imread(self.data_lists[index]), cv2.COLOR_BGR2RGB).astype(np.float32) / 255.
-        rgb = data_aug(rgb, mode=np.random.randint(0, 8))
-        h, w, c = rgb.shape
-        h = h // 8 * 8
-        w = w // 8 * 8
-        rgb = rgb[0:h, 0:w, :]
-
-        if self.downsampler == 'bic':
-            lr_rgb = cv2.resize(rgb.copy(), (0,0), fx=1/self.scale, fy=1/self.scale, interpolation=cv2.INTER_CUBIC)
-            lr_rgb = torch.from_numpy(np.ascontiguousarray(np.transpose(lr_rgb, [2, 0, 1]))).float()
-
-        rgb = torch.from_numpy(np.ascontiguousarray(np.transpose(rgb, [2, 0, 1]))).float()
-
-        if self.downsampler == 'avg':
-            lr_rgb = F.avg_pool2d(rgb.clone(), self.scale, self.scale)
-
-        lr_raw = rgb2raw(lr_rgb, is_tensor=True)
-
-        # crop gt, keep even
-        wi = random.randint(0, w - self.patch_size)
-        hi = random.randint(0, h - self.patch_size)
-        wi = wi - wi%(self.scale*2)
-        hi = hi - hi%(self.scale*2)
-        # wi, hi, start point in gt
-
-        rgb = rgb[:, hi: hi + self.patch_size, wi: wi + self.patch_size]
-        lr_raw = lr_raw[:, hi//self.scale: hi//self.scale + self.patch_size//self.scale,
-                 wi//self.scale: wi//self.scale + self.patch_size//self.scale]
-        lr_raw = lr_raw.view(1, 1, lr_raw.shape[-2], lr_raw.shape[-1])
-        lr_raw = self.raw_stack(lr_raw)
-
-        if self.denoise:
-            noise_level = max(self.min_noise, np.random.rand(1)*self.max_noise)[0]
-
-            # raw_input + noise
-            noise = torch.randn([1, 1, self.patch_size//self.scale, self.patch_size//self.scale]).mul_(noise_level)
-            lr_raw = lr_raw + self.raw_stack(noise)
-
-            # cat noise_map
-            noise_map = torch.ones([1, 1, self.patch_size//(2*self.scale), self.patch_size//(2*self.scale)])*noise_level
-            lr_raw = torch.cat((lr_raw, noise_map), 1)
-
-
-        data = {}
-        data['input'] = torch.clamp(lr_raw, 0., 1.)[0]
-        data['gt'] = torch.clamp(rgb, 0., 1.)
-        if self.get2label:
-            data['raw_gt'] = torch.clamp(rgb2raw(rgb.clone(), is_tensor=True), 0., 1.)
-
-        return data
-
-
-####################################################
-# load datasets for abaltaion study
-####################################################
-class LoadDemo(data.Dataset):
-    """
-    load training simulated datasets
-
-    """
-    def __init__(self, data_list, patch_size=64, denoise=False, max_noise=0.0748, min_noise=0.0):
-        super(LoadDemo, self).__init__()
-        self.patch_size = patch_size
         self.data_lists = []
-        self.denoise = denoise
-        self.max_noise = max_noise
-        self.min_noise = min_noise
-        self.raw_stack = DownsamplingShuffle(2)
-        # read image list from txt
-        fin = open(data_list)
-        lines = fin.readlines()
-        for line in lines:
-            line = line.strip().split()
-            self.data_lists.append(line[0])
-        fin.close()
+        with open(data_list, 'r') as fin:
+            lines = fin.readlines()
+            for line in tqdm(lines, desc='loading the {}'.format(data_list)):
+                line = line.strip().split()
+                self.data_lists.append(line[0])
+
+        self.train_transforms = transforms.Compose([
+            transforms.RandomCrop(self.patch_size),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.ToTensor()
+        ])
+        self.test_transforms = transforms.Compose([
+            transforms.CenterCrop(self.patch_size),
+            transforms.ToTensor()
+        ])
 
     def __len__(self):
         return len(self.data_lists)
 
     def __getitem__(self, index):
-        # read images, crop size
-        rgb = cv2.cvtColor(cv2.imread(self.data_lists[index]), cv2.COLOR_BGR2RGB).astype(np.float32) / 255.
-        rgb = data_aug(rgb, mode=np.random.randint(0, 8))
-        h, w, c = rgb.shape
-        h = h // 2 * 2
-        w = w // 2 * 2
-        rgb = rgb[0:h, 0:w, :]
+        # read images
+        rgb = Image.open(self.data_lists[index]).convert('RGB')
+        if self.phase == 'train':
+            rgb = self.train_transforms(rgb)
+        else:
+            rgb = self.test_transforms(rgb)
 
-        rgb = torch.from_numpy(np.ascontiguousarray(np.transpose(rgb, [2, 0, 1]))).float()
+        data = {'rgb': rgb}
+        if 'lr' in self.in_type:
+            lr_rgb = downsample_tensor(rgb, scale=self.scale, downsampler=self.downsampler)
+            lr_rgb = torch.clamp(lr_rgb, 0., 1.)
+            data.update({'lr_rgb': lr_rgb.clone()})
 
-        raw = rgb2raw(rgb.clone(), is_tensor=True)
+        # ---------------------------------
+        # unprocess step
+        # if raw, lin is in in_type, mean we need an unprocess
+        # if noisy is activated, we also need unprocess the rgb (since we only know the shot and read noise of the Raw).
+        if 'raw' in self.in_type or 'lin' in self.in_type:
+            raw = mosaic(rgb.clone())
+            data.update({'raw': raw})
 
-        # crop gt, keep even
-        wi = random.randint(0, w - self.patch_size)
-        hi = random.randint(0, h - self.patch_size)
-        wi = wi - wi%2
-        hi = hi - hi%2
-        # wi, hi, start point in gt
+            if 'lr' in self.in_type:
+                lr_raw = mosaic(lr_rgb.clone())
+                data.update({'lr_raw': lr_raw.clone()})
 
-        rgb = rgb[:, hi: hi + self.patch_size, wi: wi + self.patch_size]
-        raw = raw[:, hi: hi + self.patch_size, wi: wi + self.patch_size]
+        if 'noisy' in self.in_type:
+            shot_noise, read_noise = unprocess.random_noise_levels()
+            if 'raw' in self.in_type:  # add noise to the bayer raw image and denoise it
+                if 'lr' in self.in_type:
+                    # Approximation of variance is calculated using noisy image (rather than clean
+                    # image), since that is what will be avaiable during evaluation.
+                    noisy_lr_raw = unprocess.add_noise(lr_raw, shot_noise, read_noise)
+                    variance = shot_noise * noisy_lr_raw + read_noise
+                    data.update({'noisy_lr_raw': noisy_lr_raw.clone(), 'variance': variance.clone()})
+                else:
+                    noisy_raw = unprocess.add_noise(raw, shot_noise, read_noise)
+                    variance = shot_noise * noisy_raw + read_noise
+                    data.update({'noisy_raw': noisy_raw.clone(), 'variance': variance.clone()})
 
-        raw = raw.view(1, 1, raw.shape[-2], raw.shape[-1])
-        raw = self.raw_stack(raw)
+            elif 'rgb' in self.in_type:
+                if 'lr' in self.in_type:
+                    noisy_lr_rgb = unprocess.add_noise(lr_rgb, shot_noise, read_noise)
+                    variance = shot_noise * noisy_lr_rgb + read_noise
+                    data.update({'noisy_lr_rgb': noisy_lr_rgb.clone(), 'variance': variance.clone()})
+                else:
+                    noisy_rgb = unprocess.add_noise(rgb, shot_noise, read_noise)
+                    variance = shot_noise * noisy_rgb + read_noise
+                    data.update({'noisy_rgb': noisy_rgb.clone(), 'variance': variance.clone()})
 
-        if self.denoise:
-            noise_level = max(self.min_noise, np.random.rand(1)*self.max_noise)[0]
-
-            # raw_input + noise
-            noise = torch.randn([1, 1, self.patch_size, self.patch_size]).mul_(noise_level)
-            raw = raw + self.raw_stack(noise)
-
-            # cat noise_map
-            noise_map = torch.ones([1, 1, self.patch_size//2, self.patch_size//2])*noise_level
-            raw = torch.cat((raw, noise_map), 1)
-
-
-        data = {}
-        data['input'] = torch.clamp(raw[0], 0., 1.)
-        data['gt'] = torch.clamp(rgb, 0., 1.)
-
-        return data
+        # Here return the data we need
+        in_data = {self.in_type: data[self.in_type]}
+        in_data.update({self.out_type: data[self.out_type]})
+        if self.mid_type is not None:
+            in_data.update({self.mid_type: data[self.mid_type]})
+        if 'noisy' in self.in_type:
+            in_data.update({'variance': variance})
+        del data
+        return in_data
 
 
-class LoadRawDeno(data.Dataset):
+class LoadSimDataUnproc(data.Dataset):
     """
     load training simulated datasets
-
     """
-    def __init__(self, data_list, patch_size=64, max_noise=0.0748, min_noise=0.0):
-        super(LoadRawDeno, self).__init__()
-        self.patch_size = patch_size
-        self.data_lists = []
-        self.max_noise = max_noise
-        self.min_noise = min_noise
-        self.raw_stack = DownsamplingShuffle(2)
 
-        # read image list from txt
-        fin = open(data_list)
-        lines = fin.readlines()
-        for line in lines:
-            line = line.strip().split()
-            self.data_lists.append(line[0])
-        fin.close()
-
-    def __len__(self):
-        return len(self.data_lists)
-
-    def __getitem__(self, index):
-        # read images, crop size
-        rgb = cv2.cvtColor(cv2.imread(self.data_lists[index]), cv2.COLOR_BGR2RGB).astype(np.float32) / 255.
-        rgb = data_aug(rgb, mode=np.random.randint(0, 8))
-        h, w, c = rgb.shape
-        h = h // 2 * 2
-        w = w // 2 * 2
-        rgb = rgb[0:h, 0:w, :]
-
-        rgb = torch.from_numpy(np.ascontiguousarray(np.transpose(rgb, [2, 0, 1]))).float()
-        raw = rgb2raw(rgb, is_tensor=True)
-
-        # crop gt, keep even
-        wi = random.randint(0, w - self.patch_size)
-        hi = random.randint(0, h - self.patch_size)
-        wi = wi - wi%2
-        hi = hi - hi%2
-        # wi, hi, start point in gt
-
-        raw = raw[:, hi: hi + self.patch_size, wi: wi + self.patch_size]
-        noise_level = max(self.min_noise, np.random.rand(1)*self.max_noise)[0]
-        # raw_input + noise
-        noise = torch.randn([1, 1, self.patch_size, self.patch_size]).mul_(noise_level)
-        raw4 = raw + noise
-        raw4 = self.raw_stack(raw4.view(1,1,self.patch_size, self.patch_size))
-        # cat noise_map
-        noise_map = torch.ones([1, 1, self.patch_size//2, self.patch_size//2])*noise_level
-        raw4 = torch.cat((raw4, noise_map), 1)
-
-        data = {}
-        data['input'] = torch.clamp(raw4[0], 0., 1.)
-        data['gt'] = torch.clamp(raw, 0., 1.)
-
-        return data
-
-
-class LoadRgbDeno(data.Dataset):
-    """
-    load training simulated datasets
-
-    """
-    def __init__(self, data_list, patch_size=64, max_noise=0.0748, min_noise=0.0):
-        super(LoadRgbDeno, self).__init__()
-        self.patch_size = patch_size
-        self.data_lists = []
-        self.max_noise = max_noise
-        self.min_noise = min_noise
-
-        # read image list from txt
-        fin = open(data_list)
-        lines = fin.readlines()
-        for line in lines:
-            line = line.strip().split()
-            self.data_lists.append(line[0])
-        fin.close()
-
-    def __len__(self):
-        return len(self.data_lists)
-
-    def __getitem__(self, index):
-        # read images, crop size
-        rgb = cv2.cvtColor(cv2.imread(self.data_lists[index]), cv2.COLOR_BGR2RGB).astype(np.float32) / 255.
-        rgb = data_aug(rgb, mode=np.random.randint(0, 8))
-        h, w, c = rgb.shape
-        h = h // 2 * 2
-        w = w // 2 * 2
-        rgb = rgb[0:h, 0:w, :]
-        rgb = torch.from_numpy(np.ascontiguousarray(np.transpose(rgb, [2, 0, 1]))).float()
-
-        # crop gt, keep even
-        wi = random.randint(0, w - self.patch_size)
-        hi = random.randint(0, h - self.patch_size)
-        # wi, hi, start point in gt
-
-        rgb = rgb[:, hi: hi + self.patch_size, wi: wi + self.patch_size]
-        noise_level = max(self.min_noise, np.random.rand(1)*self.max_noise)[0]
-        # raw_input + noise
-        noise = torch.randn([1, 1, self.patch_size, self.patch_size]).mul_(noise_level)
-        rgb_noisy = rgb + noise
-
-        # cat noise_map
-        noise_map = torch.ones([1, 1, self.patch_size, self.patch_size])*noise_level
-        rgb_noisy = torch.cat((rgb_noisy, noise_map), 1)[0]
-
-        data = {}
-        data['input'] = torch.clamp(rgb_noisy, 0., 1.)
-        data['gt'] = torch.clamp(rgb, 0., 1.)
-
-        return data
-
-
-class LoadRawSR(data.Dataset):
-    """
-    load training simulated datasets
-
-    """
-    def __init__(self, data_list, patch_size=64, scale=2, denoise=False, max_noise=0.0748, min_noise=0.0,
-                 downsampler='avg'):
-        super(LoadRawSR, self).__init__()
+    def __init__(self,
+                 data_list,
+                 phase='train',
+                 patch_size=64,
+                 downsampler='bic', scale=2,
+                 in_type='noisy_lr_raw',
+                 mid_type='raw',  # or None
+                 out_type='rgb',
+                 ):
+        super(LoadSimDataUnproc, self).__init__()
+        self.phase = phase
         self.scale = scale
         self.patch_size = patch_size
-        self.data_lists = []
-        self.denoise = denoise
-        self.max_noise = max_noise
-        self.min_noise = min_noise
         self.downsampler = downsampler
         self.raw_stack = DownsamplingShuffle(2)
+        self.in_type = in_type
+        self.mid_type = mid_type
+        self.out_type = out_type
 
         # read image list from txt
-        fin = open(data_list)
-        lines = fin.readlines()
-        for line in lines:
-            line = line.strip().split()
-            self.data_lists.append(line[0])
-        fin.close()
+        self.data_lists = []
+        with open(data_list, 'r') as fin:
+            lines = fin.readlines()
+            for line in tqdm(lines, desc='loading the {}'.format(data_list)):
+                line = line.strip().split()
+                self.data_lists.append(line[0])
+
+        self.train_transforms = transforms.Compose([
+            transforms.RandomCrop(self.patch_size),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+            transforms.ToTensor()
+        ])
+        self.test_transforms = transforms.Compose([
+            transforms.CenterCrop(self.patch_size),
+            transforms.ToTensor()
+        ])
 
     def __len__(self):
         return len(self.data_lists)
 
     def __getitem__(self, index):
-        # read images, crop size
-        rgb = cv2.cvtColor(cv2.imread(self.data_lists[index]), cv2.COLOR_BGR2RGB).astype(np.float32) / 255.
-        rgb = data_aug(rgb, mode=np.random.randint(0, 8))
-        h, w, c = rgb.shape
-        h = h // 8 * 8
-        w = w // 8 * 8
-        rgb = rgb[0:h, 0:w, :]
+        # read images
+        srgb = Image.open(self.data_lists[index]).convert('RGB')
+        if self.phase == 'train':
+            srgb = self.train_transforms(srgb)
+        else:
+            srgb = self.test_transforms(srgb)
 
-        if self.downsampler == 'bic':
-            lr_rgb = cv2.resize(rgb.copy(), (0,0), fx=1/self.scale, fy=1/self.scale, interpolation=cv2.INTER_CUBIC)
-            lr_rgb = torch.from_numpy(np.ascontiguousarray(np.transpose(lr_rgb, [2, 0, 1]))).float()
+        data = {'srgb': srgb}
+        if 'lr' in self.in_type:
+            lr_srgb = downsample_tensor(srgb, scale=self.scale, downsampler=self.downsampler)
+            lr_srgb = torch.clamp(lr_srgb, 0., 1.)
+            data.update({'lr_srgb': lr_srgb.clone()})
 
-        # rgb = rgb.astype(np.float32) / 255.
-        rgb = torch.from_numpy(np.ascontiguousarray(np.transpose(rgb, [2, 0, 1]))).float()
+        # ---------------------------------
+        # unprocess step
+        # if raw, lin is in in_type, mean we need an unprocess
+        # if noisy is activated, we also need unprocess the rgb (since we only know the shot and read noise of the Raw).
+        if 'raw' in self.in_type or 'lin' in self.in_type:
+            rgb2cam = unprocess.random_ccm()
+            cam2rgb = torch.inverse(rgb2cam)
+            rgb_gain, red_gain, blue_gain = unprocess.random_gains()
+            metadata = {
+                'cam2rgb': cam2rgb,
+                'rgb_gain': rgb_gain,
+                'red_gain': red_gain,
+                'blue_gain': blue_gain,
+            }
+            raw, linrgb = unprocess.unprocess(srgb, rgb2cam, rgb_gain, red_gain, blue_gain)
 
-        if self.downsampler == 'avg':
-            lr_rgb = F.avg_pool2d(rgb.clone(), self.scale, self.scale)
+            data.update(metadata)
+            data.update({'raw': raw.clone(), 'linrgb': linrgb.clone()})
 
-        # crop gt, keep even
-        wi = random.randint(0, w - self.patch_size)
-        hi = random.randint(0, h - self.patch_size)
-        wi = wi - wi%2
-        hi = hi - hi%2
-        # wi, hi, start point in gt
+            if 'lr' in self.in_type:
+                lr_raw, lr_linrgb = unprocess.unprocess(lr_srgb, rgb2cam, rgb_gain, red_gain, blue_gain)
+                data.update({'lr_raw': lr_raw.clone(), 'lr_linrgb': lr_linrgb.clone()})
 
-        rgb = rgb[:, hi: hi + self.patch_size, wi: wi + self.patch_size]
-        lr_rgb = lr_rgb[:, hi//self.scale: hi//self.scale + self.patch_size//self.scale,
-                 wi//self.scale: wi//self.scale + self.patch_size//self.scale]
-        lr_raw = rgb2raw(lr_rgb, is_tensor=True)
-        raw = rgb2raw(rgb, is_tensor=True)
+        if 'noisy' in self.in_type:
+            shot_noise, read_noise = unprocess.random_noise_levels()
+            if 'raw' in self.in_type:  # add noise to the bayer raw image and denoise it
+                if 'lr' in self.in_type:
+                    # Approximation of variance is calculated using noisy image (rather than clean
+                    # image), since that is what will be avaiable during evaluation.
+                    noisy_lr_raw = unprocess.add_noise(lr_raw, shot_noise, read_noise)
+                    variance = shot_noise * noisy_lr_raw + read_noise
+                    data.update({'noisy_lr_raw': noisy_lr_raw.clone(), 'variance': variance.clone()})
+                else:
+                    noisy_raw = unprocess.add_noise(raw, shot_noise, read_noise)
+                    variance = shot_noise * noisy_raw + read_noise
+                    data.update({'noisy_raw': noisy_raw.clone(), 'variance': variance.clone()})
 
-        lr_raw = lr_raw.view(1, 1, lr_raw.shape[-2], lr_raw.shape[-1])
-        lr_raw = self.raw_stack(lr_raw)
+            elif 'linrgb' in self.in_type:  # also add noise on raw but denoise on RGB.
+                if 'lr' in self.in_type:
+                    noisy_lr_linrgb = unprocess.add_noise(lr_linrgb, shot_noise, read_noise)
+                    variance = shot_noise * noisy_lr_linrgb + read_noise
+                    data.update({'noisy_lr_linrgb': noisy_lr_linrgb.clone(), 'variance': variance.clone()})
+                else:
+                    noisy_linrgb = unprocess.add_noise(linrgb, shot_noise, read_noise)
+                    variance = shot_noise * noisy_linrgb + read_noise
+                    data.update({'noisy_linrgb': noisy_linrgb.clone(), 'variance': variance.clone()})
+            elif 'srgb' in self.in_type:
+                if 'lr' in self.in_type:
+                    noisy_lr_srgb = unprocess.add_noise(lr_srgb, shot_noise, read_noise)
+                    variance = shot_noise * noisy_lr_srgb + read_noise
+                    data.update({'noisy_lr_srgb': noisy_lr_srgb.clone(), 'variance': variance.clone()})
+                else:
+                    noisy_srgb = unprocess.add_noise(srgb, shot_noise, read_noise)
+                    variance = shot_noise * noisy_srgb + read_noise
+                    data.update({'noisy_srgb': noisy_srgb.clone(), 'variance': variance.clone()})
 
-        if self.denoise:
-            noise_level = max(self.min_noise, np.random.rand(1)*self.max_noise)[0]
-
-            # raw_input + noise
-            noise = torch.randn([1, 1, self.patch_size//self.scale, self.patch_size//self.scale]).mul_(noise_level)
-            lr_raw = lr_raw + self.raw_stack(noise)
-
-            # cat noise_map
-            noise_map = torch.ones([1, 1, self.patch_size//(2*self.scale), self.patch_size//(2*self.scale)])*noise_level
-            lr_raw = torch.cat((lr_raw, noise_map), 1)
-
-
-        data = {}
-        data['input'] = torch.clamp(lr_raw[0], 0., 1.)
-        data['gt'] = torch.clamp(raw, 0., 1.)
-
-        return data
+        # Here return the data we need
+        in_data = {self.in_type: data[self.in_type]}
+        in_data.update({self.out_type: data[self.out_type]})
+        if self.mid_type is not None:
+            in_data.update({self.mid_type: data[self.mid_type]})
+        if 'noisy' in self.in_type:
+            in_data.update({'variance': data['variance']})
+        in_data.update({'metadata': metadata})
+        del data
+        return in_data
 
 
-class LoadRgbSR(data.Dataset):
+class LoadBenchamrk(data.Dataset):
     """
     load training simulated datasets
-
     """
-    def __init__(self, data_list, patch_size=64, scale=2, denoise=False, max_noise=0.0748, min_noise=0.0,
-                 downsampler='avg'):
-        super(LoadRgbSR, self).__init__()
+
+    def __init__(self,
+                 data_list,
+                 phase='train',
+                 patch_size=64,
+                 downsampler='bic', scale=2,
+                 in_type='noisy_lr_raw',
+                 mid_type='raw',  # or None
+                 out_type='rgb',
+                 ):
+        super(LoadBenchamrk, self).__init__()
+        self.phase = phase
         self.scale = scale
         self.patch_size = patch_size
-        self.data_lists = []
-        self.denoise = denoise
-        self.max_noise = max_noise
-        self.min_noise = min_noise
         self.downsampler = downsampler
+        self.raw_stack = DownsamplingShuffle(2)
+        self.in_type = in_type
+        self.mid_type = mid_type
+        self.out_type = out_type
 
         # read image list from txt
-        fin = open(data_list)
-        lines = fin.readlines()
-        for line in lines:
-            line = line.strip().split()
-            self.data_lists.append(line[0])
-        fin.close()
+        self.data_lists = []
+        with open(data_list, 'r') as fin:
+            lines = fin.readlines()
+            for line in tqdm(lines, desc='loading the {}'.format(data_list)):
+                line = line.strip().split()
+                self.data_lists.append(line[0])
 
     def __len__(self):
         return len(self.data_lists)
 
     def __getitem__(self, index):
-        # read images, crop size
-        rgb = cv2.cvtColor(cv2.imread(self.data_lists[index]), cv2.COLOR_BGR2RGB).astype(np.float32) / 255.
-        rgb = data_aug(rgb, mode=np.random.randint(0, 8))
-        h, w, c = rgb.shape
-        h = h // 2 * 2
-        w = w // 2 * 2
-        rgb = rgb[0:h, 0:w, :]
+        # read images
+        srgb = Image.open(self.data_lists[index]).convert('RGB')
+        srgb = crop_img(srgb, self.patch_size, center_crop=self.phase != 'train')  # in PIL
+        if self.phase == 'train':
+            srgb = aug_img(srgb)
+        srgb = TF.to_tensor(srgb)
 
-        if self.downsampler == 'bic':
-            lr_rgb = cv2.resize(rgb.copy(), (0,0), fx=1/self.scale, fy=1/self.scale, interpolation=cv2.INTER_CUBIC)
-            lr_rgb = torch.from_numpy(np.ascontiguousarray(np.transpose(lr_rgb, [2, 0, 1]))).float()
+        data = {'srgb': srgb}
+        if 'lr' in self.in_type:
+            lr_srgb = downsample_tensor(srgb)
+            data.update({'lr_srgb': lr_srgb})
 
-        rgb = torch.from_numpy(np.ascontiguousarray(np.transpose(rgb, [2, 0, 1]))).float()
+        # ---------------------------------
+        # unprocess step
+        # if raw, lin is in in_type, mean we need an unprocess
+        # if noisy is activated, we also need unprocess the rgb (since we only know the shot and read noise of the Raw).
+        if 'raw' in self.in_type or 'lin' in self.in_type:
+            rgb2cam = unprocess.random_ccm()
+            cam2rgb = torch.inverse(rgb2cam)
+            rgb_gain, red_gain, blue_gain = unprocess.random_gains()
+            metadata = {
+                'cam2rgb': cam2rgb,
+                'rgb_gain': rgb_gain,
+                'red_gain': red_gain,
+                'blue_gain': blue_gain,
+            }
+            raw, linrgb = unprocess.unprocess(srgb, rgb2cam, rgb_gain, red_gain, blue_gain)
 
-        if self.downsampler == 'avg':
-            lr_rgb = F.avg_pool2d(rgb.clone(), self.scale, self.scale)
+            data.update(metadata)
+            data.update({'raw': raw, 'linrgb': linrgb})
 
-        # crop gt, keep even
-        wi = random.randint(0, w - self.patch_size)
-        hi = random.randint(0, h - self.patch_size)
-        # wi, hi, start point in gt
+            if 'lr' in self.in_type:
+                lr_raw, lr_linrgb = unprocess.unprocess(lr_srgb, rgb2cam, rgb_gain, red_gain, blue_gain)
+                data.update({'lr_raw': lr_raw, 'lr_linrgb': lr_linrgb})
 
-        rgb = rgb[:, hi: hi + self.patch_size, wi: wi + self.patch_size]
-        lr_rgb = lr_rgb[:, hi//self.scale: hi//self.scale + self.patch_size//self.scale, wi//self.scale: wi//self.scale + self.patch_size//self.scale]
-        if self.denoise:
-            noise_level = max(self.min_noise, np.random.rand(1)*self.max_noise)[0]
-            # raw_input + noise
-            noise = torch.randn([1, 1, self.patch_size//self.scale, self.patch_size//self.scale]).mul_(noise_level)
-            lr_rgb = lr_rgb + noise
+        if 'noisy' in self.in_type:
+            shot_noise, read_noise = unprocess.random_noise_levels()
+            if 'raw' in self.in_type:  # add noise to the bayer raw image and denoise it
+                if 'lr' in self.in_type:
+                    # Approximation of variance is calculated using noisy image (rather than clean
+                    # image), since that is what will be avaiable during evaluation.
+                    noisy_lr_raw = unprocess.add_noise(lr_raw, shot_noise, read_noise)
+                    variance = shot_noise * noisy_lr_raw + read_noise
+                    data.update({'noisy_lr_raw': noisy_lr_raw, 'variance': variance})
+                else:
+                    noisy_raw = unprocess.add_noise(raw, shot_noise, read_noise)
+                    variance = shot_noise * noisy_raw + read_noise
+                    data.update({'noisy_raw': noisy_raw, 'variance': variance})
 
-            # cat noise_map
-            noise_map = torch.ones([1, 1, self.patch_size//self.scale, self.patch_size//self.scale])*noise_level
-            lr_rgb = torch.cat((lr_rgb, noise_map), 1)[0]
+            elif 'linrgb' in self.in_type:  # also add noise on raw but denoise on RGB.
+                if 'lr' in self.in_type:
+                    noisy_lr_linrgb = unprocess.add_noise(lr_linrgb, shot_noise, read_noise)
+                    variance = shot_noise * noisy_lr_linrgb + read_noise
+                    data.update({'noisy_lr_linrgb': noisy_lr_linrgb, 'variance': variance})
+                else:
+                    noisy_linrgb = unprocess.add_noise(linrgb, shot_noise, read_noise)
+                    variance = shot_noise * noisy_linrgb + read_noise
+                    data.update({'noisy_linrgb': noisy_linrgb, 'variance': variance})
+            elif 'srgb' in self.in_type:
+                if 'lr' in self.in_type:
+                    noisy_lr_srgb = unprocess.add_noise(lr_srgb, shot_noise, read_noise)
+                    variance = shot_noise * noisy_lr_srgb + read_noise
+                    data.update({'noisy_lr_srgb': noisy_lr_srgb, 'variance': variance})
+                else:
+                    noisy_srgb = unprocess.add_noise(srgb, shot_noise, read_noise)
+                    variance = shot_noise * noisy_srgb + read_noise
+                    data.update({'noisy_linrgb': noisy_srgb, 'variance': variance})
+
+        # Here return the data we need
+        in_data = {self.in_type: data[self.in_type]}
+        in_data.update({self.out_type: data[self.out_type]})
+        if self.mid_type is not None:
+            in_data.update({self.mid_type: data[self.mid_type]})
+        if 'noisy' in self.in_type:
+            in_data.update({'variance': variance})
+        # in_data.update({'metadata': metadata})
+        del data
+        return in_data
 
 
-        data = {}
-        data['input'] = torch.clamp(lr_rgb, 0., 1.)
-        data['gt'] = torch.clamp(rgb, 0., 1.)
-
-        return data
+# # Code for debug the PixelShift dataset
+# from datasets import process
+# def vis_numpy(x):
+#     import matplotlib.pyplot as plt
+#     plt.imshow(x, cmap='gray')
+#     plt.show()
 #
+#
+# def vis_tensor(tensor):
+#     import torch
+#     from torchvision import utils
+#     import matplotlib.pyplot as plt
+#
+#     grid = utils.make_grid(tensor)
+#     ndarr = grid.mul(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).to('cpu', torch.uint8).numpy()
+#     # vis_numpy(ndarr)
+#     plt.imshow(ndarr, cmap='gray')
+#     plt.show()
+# def raw_unpack(input):
+#     import torch.nn as nn
+#     demo = nn.PixelShuffle(2)
+#     return demo(input)
+#
+# # show the rgb img:
+# # vis_gray(srgb)
+# vis_gray(linrgb.permute(1,2,0))
+# vis_gray(lr_linrgb.permute(1,2,0))
 
-
-
+# # show the gt raw:
+# vis_tensor(raw_unpack(raw.unsqueeze(0)))
+#
+# # show the noisy raw:
+# vis_gray(raw_unpack(noisy_lr_raw.unsqueeze(0)).squeeze())

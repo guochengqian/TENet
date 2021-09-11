@@ -2,7 +2,8 @@ import os
 import numpy as np
 import shutil
 
-class TestArgs():
+
+class TestArgs:
     def __init__(self):
         self.initialized = False
 
@@ -27,7 +28,7 @@ class TestArgs():
         parser.add_argument('--crop_scale', default=1, type=int,
                             help='shift pixel vertically')
         # model args
-        parser.add_argument('--pretrained_model', default='', type=str,
+        parser.add_argument('--pretrain', default='', type=str,
                             help='path to pretrained model(default: none)')
         parser.add_argument('--model', default='demo', type=str,
                             help='path to pretrained model(default: none)')
@@ -42,12 +43,12 @@ class TestArgs():
         parser.add_argument('--channels', default=64, type=int,
                             help='channels')
         # for single task
-        parser.add_argument('--n_resblocks', default=6, type=int,
+        parser.add_argument('--n_blocks', default=6, type=int,
                             help='number of basic blocks')
         # for joint task
-        parser.add_argument('--sr_n_resblocks', default=6, type=int,
+        parser.add_argument('--sr_n_blocks', default=6, type=int,
                             help='number of super-resolution blocks')
-        parser.add_argument('--dm_n_resblocks', default=6, type=int,
+        parser.add_argument('--dm_n_blocks', default=6, type=int,
                             help='number of demosaicking blocks')
         # for super-resolution
         parser.add_argument('--scale', default=1, type=int,

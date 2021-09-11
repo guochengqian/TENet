@@ -10,14 +10,18 @@ from torchvision import models
 import torch.nn.init as init
 
 import math
+
 # import VGG
 
 bce_loss = nn.BCELoss()
 mse_loss = nn.MSELoss()
+
+
 # l1_loss = nn.L1Loss()
 
 class Charbonnier_loss(nn.Module):
     """L1 Charbonnierloss."""
+
     def __init__(self, epsilon=1e-6):
         super(Charbonnier_loss, self).__init__()
         self.eps = epsilon ** 2
@@ -25,36 +29,38 @@ class Charbonnier_loss(nn.Module):
     def forward(self, X, Y):
         # batchsize = X.data.shape[0]
         diff = X - Y
-        loss = torch.mean(torch.sqrt(diff ** 2 + self.eps)) 
+        loss = torch.mean(torch.sqrt(diff ** 2 + self.eps))
         return loss
 
 
 class L1_TVLoss(nn.Module):
-    def __init__(self,TVLoss_weight=1):
-        super(L1_TVLoss,self).__init__()
+    def __init__(self, TVLoss_weight=1):
+        super(L1_TVLoss, self).__init__()
 
     def forward(self, x):
         batch_size = x.size()[0]
-        h_tv = torch.abs((x[:, :, 1:, :]-x[:, :, :-1, :])).sum()
-        w_tv = torch.abs((x[:, :, :, 1:]-x[:, :, :, :-1])).sum()
+        h_tv = torch.abs((x[:, :, 1:, :] - x[:, :, :-1, :])).sum()
+        w_tv = torch.abs((x[:, :, :, 1:] - x[:, :, :, :-1])).sum()
         return h_tv + w_tv
 
+
 class L1_TVLoss_Charbonnier(nn.Module):
-    def __init__(self,TVLoss_weight=1):
-        super(L1_TVLoss_Charbonnier,self).__init__()
+    def __init__(self, TVLoss_weight=1):
+        super(L1_TVLoss_Charbonnier, self).__init__()
         self.e = 0.000001 ** 2
 
     def forward(self, x):
         batch_size = x.size()[0]
-        h_tv = torch.abs((x[:, :, 1:, :]-x[:, :, :-1, :]))
+        h_tv = torch.abs((x[:, :, 1:, :] - x[:, :, :-1, :]))
         h_tv = torch.mean(torch.sqrt(h_tv ** 2 + self.e))
-        w_tv = torch.abs((x[:, :, :, 1:]-x[:, :, :, :-1]))
+        w_tv = torch.abs((x[:, :, :, 1:] - x[:, :, :, :-1]))
         w_tv = torch.mean(torch.sqrt(w_tv ** 2 + self.e))
         return h_tv + w_tv
 
+
 class TV_L1LOSS(nn.Module):
-    def __init__(self,TVLoss_weight=1):
-        super(TV_L1LOSS,self).__init__()
+    def __init__(self, TVLoss_weight=1):
+        super(TV_L1LOSS, self).__init__()
 
     def forward(self, x, y):
         size = x.size()
@@ -65,6 +71,7 @@ class TV_L1LOSS(nn.Module):
 
 class MSEloss(nn.Module):
     """L1 Charbonnierloss."""
+
     def __init__(self, epsilon=1e-3):
         super(MSEloss, self).__init__()
         self.eps = epsilon ** 2
@@ -117,30 +124,36 @@ class Perceptual_loss(nn.Module):
 
 def euclideanLoss(output, label, input_size):
     mse = mse_loss(output, label)
-    mse = mse*((input_size)/2.)
+    mse = mse * ((input_size) / 2.)
     return mse
+
 
 def euclideanLoss2(output, label):
     mse = MSEloss()(output, label)
     return mse
 
+
 def L1NormLoss(output, label, input_size):
     l1norm = l1_loss(output, label)
-    l1norm = l1norm*((input_size)/2.)
+    l1norm = l1norm * ((input_size) / 2.)
     return l1norm
+
 
 def C_Loss(output, label):
     c_loss_func = Charbonnier_loss(epsilon=1e-3)
     return c_loss_func(output, label)
+
 
 def TVLoss(output):
     l1_tvloss = L1_TVLoss()
     size = output.size()
     return l1_tvloss(output) / size[0] / size[1] / size[2] / size[3]
 
+
 def TVLoss_Charbonnier(output):
     l1_tvloss = L1_TVLoss_Charbonnier()
     return l1_tvloss(output)
+
 
 def TV_l1loss(output, label):
     tv_l1loss = TV_L1LOSS()
@@ -161,54 +174,59 @@ def perception_loss_filter(output, label, var_bound, loss_network2, loss_network
 
 
 def invert_preproc(imgs, white_level):
-	# return sRGBforward(torch.transpose(imgs) / white_level)
-	# print torch.min(white_level)
-	a = sRGBforward(imgs / white_level)
-	# print 'bala:', a.shape
-	# print a
-	return a
+    # return sRGBforward(torch.transpose(imgs) / white_level)
+    # print torch.min(white_level)
+    a = sRGBforward(imgs / white_level)
+    # print 'bala:', a.shape
+    # print a
+    return a
+
 
 def sRGBforward(x):
-	b = torch.Tensor([.0031308]).cuda()
-	gamma = 1./2.4
-	a = 1./(1./(b**gamma*(1.-gamma))-1.)
-	k0 = (1+a)*gamma*b**(gamma-1.)
-	gammafn = lambda x : (1+a)*torch.pow(torch.max(x, b), gamma)-a
+    b = torch.Tensor([.0031308]).cuda()
+    gamma = 1. / 2.4
+    a = 1. / (1. / (b ** gamma * (1. - gamma)) - 1.)
+    k0 = (1 + a) * gamma * b ** (gamma - 1.)
+    gammafn = lambda x: (1 + a) * torch.pow(torch.max(x, b), gamma) - a
 
-	srgb = torch.where(x < b, k0 * x, gammafn(x))
+    srgb = torch.where(x < b, k0 * x, gammafn(x))
 
-	k1 = (1+a)*gamma
-	srgb = torch.where(x > 1, k1 * x - k1 + 1, srgb)
+    k1 = (1 + a) * gamma
+    srgb = torch.where(x > 1, k1 * x - k1 + 1, srgb)
 
-	return srgb
+    return srgb
+
 
 def gradient(imgs):
-	return torch.stack([0.5*(imgs[:,:,1:,:-1]-imgs[:,:,:-1,:-1]), 
-		0.5*(imgs[:,:,:-1,1:]-imgs[:,:,:-1,:-1])], dim=-1)
+    return torch.stack([0.5 * (imgs[:, :, 1:, :-1] - imgs[:, :, :-1, :-1]),
+                        0.5 * (imgs[:, :, :-1, 1:] - imgs[:, :, :-1, :-1])], dim=-1)
+
 
 def gradient_loss(img, truth):
-	gi = gradient(img)
-	gt = gradient(truth)
+    gi = gradient(img)
+    gt = gradient(truth)
 
-	sh = gi.shape
-	# print 'sh', sh
-	length = 1
-	for i in range(len(sh)):
-		length *= sh[i]
+    sh = gi.shape
+    # print 'sh', sh
+    length = 1
+    for i in range(len(sh)):
+        length *= sh[i]
 
-	return torch.sum(torch.abs(gi - gt)) / length
+    return torch.sum(torch.abs(gi - gt)) / length
+
 
 def basic_img_loss(img, truth):
-	# pdb.set_trace()
-	sh = img.shape
-	# print 'sh', sh
-	length = 1
-	for i in range(len(sh)):
-		length *= sh[i]
-	l2_pixel = torch.sum((img - truth)*(img-truth)) / length
-	l1_grad = gradient_loss(img, truth)
-	# print 'l2_pixel', l2_pixel
-	return l2_pixel + l1_grad
+    # pdb.set_trace()
+    sh = img.shape
+    # print 'sh', sh
+    length = 1
+    for i in range(len(sh)):
+        length *= sh[i]
+    l2_pixel = torch.sum((img - truth) * (img - truth)) / length
+    l1_grad = gradient_loss(img, truth)
+    # print 'l2_pixel', l2_pixel
+    return l2_pixel + l1_grad
+
 
 # class VGGLoss(nn.Module):
 #     def __init__(self):
@@ -267,6 +285,7 @@ def gaussian2d(u, v, sigma):
     intensity = 1 / (2.0 * pi * sigma * sigma) * math.exp(- 1 / 2.0 * ((u ** 2) + (v ** 2)) / (sigma ** 2))
     return intensity
 
+
 def gaussianKernal(r, sigma):
     kernal = np.zeros([r, r])
     center = (r - 1) / 2.0
@@ -275,6 +294,7 @@ def gaussianKernal(r, sigma):
             kernal[i, j] = gaussian2d(i - center, j - center, sigma)
     kernal /= np.sum(np.sum(kernal))
     return kernal
+
 
 def weights_init_Gaussian_blur(sigma=1.0):
     def sub_func(m):
@@ -286,11 +306,13 @@ def weights_init_Gaussian_blur(sigma=1.0):
                 m.weight.data[i, 0, :, :] = torch.from_numpy(gaussian_blur)
             if not m.bias is None:
                 m.bias.data.zero_()
+
     return sub_func
+
 
 def weights_init_He_normal(m):
     classname = m.__class__.__name__
-#     print classname
+    #     print classname
     if classname.find('Transpose') != -1:
         m.weight.data.normal_(0.0, 0.001)
         if not m.bias is None:
@@ -310,8 +332,9 @@ def weights_init_He_normal(m):
         if not m.bias is None:
             m.bias.data.zero_()
 
+
 def l1_loss(input, output):
-    return torch.mean(torch.abs(input-output))
+    return torch.mean(torch.abs(input - output))
 
 
 class VGGLoss(nn.Module):
@@ -362,6 +385,7 @@ class VGGLoss(nn.Module):
     )
 
     """
+
     def __init__(self, vgg_path, layers='45', input='RGB', loss='l1'):
         super(VGGLoss, self).__init__()
         self.input = input
