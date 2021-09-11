@@ -9,7 +9,7 @@ The original name of this project is: "Trinity of Pixel Enhancement: a Joint Sol
 
 ## pipeline DN -> SR -> DM
 
-![pipeline](/home/qiang/codefiles/low_level/ISP/TENet_new/misc/pipeline_result.png)
+![pipeline](misc/pipeline_result.png)
 
 ## TENet
 
@@ -22,7 +22,7 @@ We insert the proposed pipeline DN -> SR -> DM into an end-to-end network constr
 
 ## PixelShift200 dataset
 
-![pixelshift](/home/qiang/codefiles/low_level/ISP/TENet_new/misc/PixelShift.png)
+![pixelshift](misc/PixelShift.png)
 
 
 
@@ -62,14 +62,12 @@ conda activate tenet
    3. Link DIV2K data into ./data/DIV2K, e.g. `ln -s /data/lowlevel/DIV2K ./` 
 
    4. Crop DIV2K
-
       ```bash
       cd ../datasets
       python crop_imgs.py --src_dir ../data/DIV2K/DIV2K_val5_HR --save_dir ../data/DIV2K/DIV2K_val5_HR_sub # crop val5 images
       python generate_datalist_div2k.py  # generate div2k training and val dataset
       ```
-      
-The generated .txt file  `train_div2k.txt` and `val_div2k.txt` are used for training on DIV2K.     
+      The generated .txt file  `train_div2k.txt` and `val_div2k.txt` are used for training on DIV2K.     
    
 2. PixelShift200 data preparation 
 
@@ -78,18 +76,13 @@ The generated .txt file  `train_div2k.txt` and `val_div2k.txt` are used for trai
    3. Link PixelShift200 data into ./data/pixelshift200, e.g. `cd TENet/data && ln -s /data/pixelshift200 pixelshift200` 
 
    4. Crop images into 512*512, and generate the text file contains the location of each image:
-
-      ```shell
-   cd ../datasets
+      ```bash
+      cd ../datasets
       python crop_pixelshift200.py 
       python generate_datalist_pixelshift.py 
       ```
-   
       The generated .txt file  `train_pixelshift.txt` (9444 Lines) and `val_pixelshift.txt` (20 Lines) are used for training. check them. 
 
-      
-
- 
 
 ## Training
 #### Train  joint  models: 
@@ -158,13 +151,13 @@ python train.py --in_type lr_linrgb --out_type linrgb --model resnet --train_lis
 
 ```shell
 bash script_all_pipelines.sh 
-# this script supports evaluation on all benchmarking datasets as well as the real-shot images for all possible pipelines
 ```
 
-Note: for the real shot images testing, you have to:
-
-1.  save the real-shot image as a readable raw image (like in .RAW, .ARW, .DNG format).  For example,  we use Lightroom mobile version to shot images on iPhone and save the photo in .DNG format.
-2. Read the general metadata using RawPy and read the noise profiling metadata using [Jeffrey's Image Metadata Viewer](http://exif.regex.info/exif.cgi) or [metapicz](http://metapicz.com/). 
+Note: 
+1. this script supports evaluation on all benchmarking datasets as well as the real-shot images for all possible pipelines
+2. for the real shot images testing, you have to:
+    * save the real-shot image as a readable raw image (like in .RAW, .ARW, .DNG format).  For example,  we use Lightroom mobile version to shot images on iPhone and save the photo in .DNG format.
+    * Read the general metadata using RawPy and read the noise profiling metadata using [Jeffrey's Image Metadata Viewer](http://exif.regex.info/exif.cgi) or [metapicz](http://metapicz.com/). 
 
 
 
