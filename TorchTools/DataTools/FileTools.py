@@ -82,7 +82,7 @@ def _read_image(path):
 #     return img
 
 
-def _cv2_read_images(path):
+def read_image2np(path):
     img = cv2.cvtColor(cv2.imread(path), cv2.COLOR_BGR2RGB)
     if img.dtype == np.uint16:
         img = img.astype(np.float32) / 65535.
@@ -134,42 +134,11 @@ def _tensor2cvimage(tensor, dtype):
         return _float2uint(img[0, :, :].numpy(), dtype)
 
 
-def _tensor2image(tensor, dtype):
-    tensor = torch.clamp(tensor.cpu(), 0, 1).detach()
-    img = tensor[0, :, :, :] if len(tensor.shape) == 4 else tensor
-    if img.shape[0] == 3:
-        return _float2uint(img.numpy().transpose(1, 2, 0), dtype)
-    else:
-        return _float2uint(img[0, :, :].numpy(), dtype)
-
-
-def _pil2cv(img):
-    im = np.asarray(img)
-    if im.shape[2] == 3:
-        return cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
-    else:
-        return im
-
-
-def save_image_tensor2cv2(input_tensor: torch.Tensor, filename):
-    """
-    Save tensor to cv2 format
-         :param input_tensor: tensor to save
-         :param filename: saved file name
-    """
-    assert (len(input_tensor.shape) == 4 and input_tensor.shape[0] == 1)
-    # Make a copy
-    input_tensor = input_tensor.clone().detach()
-    # To cpu
-    input_tensor = input_tensor.to(torch.device('cpu'))
-    # Denormalization
-    # input_tensor = unnormalize(input_tensor)
-    # Remove batch dimension
-    input_tensor = input_tensor.squeeze()
-    # Convert from [0,1] to [0,255], then from CHW to HWC, and finally to cv2
+def tensor2np(tensor):
+    input_tensor = torch.clamp(tensor.cpu(), 0, 1).detach().squeeze()
     input_tensor = input_tensor.mul_(255).add_(0.5).clamp_(0, 255).permute(1, 2, 0).type(torch.uint8).numpy()
-    # RGB to BRG
-    input_tensor = cv2.cvtColor(input_tensor, cv2.COLOR_RGB2BGR)
-    cv2.imwrite(filename, input_tensor)
+    return input_tensor
 
-
+def save_tensor_to_cv2img(tensor, save_path):
+    rgb_out = tensor2np(tensor)      
+    cv2.imwrite(save_path, cv2.cvtColor(rgb_out, cv2.COLOR_RGB2BGR))

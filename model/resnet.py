@@ -7,54 +7,59 @@ resnet for different specified task
 """
 
 
-class NET(nn.Module):
-    def __init__(self, opt):
-        super(NET, self).__init__()
+class Net(nn.Module):
+    def __init__(self, 
+                 in_type: str = 'noisy_lr_raw',
+                 mid_type: str = ['lr_raw', 'raw'], 
+                 out_type: str = 'linrgb',
+                 scale: int = 2,
+                 output_mid: bool = False,
+                 block: str = 'rrdb',
+                 n_blocks: int = [1, 5, 6],
+                 channels: int = 64,
+                 noise_channels: int = 1,
+                 norm=None,
+                 act: str = 'relu',
+                 **kwargs
+                 ):
+        super().__init__()
 
-        n_blocks = opt.n_blocks
-        n_feats = opt.channels
+        bias = True if (norm is None or not norm) else False
 
-        block_type = opt.block_type
-        norm_type = opt.norm_type
-        act_type = opt.act_type
-        bias = opt.bias
-
-        in_channels = 3 if 'rgb' in opt.in_type else 4
-        out_channels = 3 if 'rgb' in opt.out_type else 4
+        in_channels = 3 if 'rgb' in in_type else 4
+        out_channels = 3 if 'rgb' in out_type else 4
         noise_channels = in_channels
-        use_denoise = 'noisy' in opt.in_type
-        self.use_sr = False
-        if 'lr' in opt.in_type:
-            self.use_sr = True
-            scale = opt.scale
-        elif 'raw' in opt.in_type and 'rgb' in opt.out_type:    # demosaicking
-            self.use_sr = True
+        to_dn = 'noisy' in in_type
+        self.to_upsample = False
+        if 'lr' in in_type:
+            self.to_upsample = True
+        elif 'raw' in in_type and 'rgb' in out_type:    # demosaicking
+            self.to_upsample = True
             scale = 2
 
-        if use_denoise:
-            head = [common.ConvBlock(in_channels + noise_channels, n_feats, 3,
-                                     act_type=act_type, bias=True)]
+        if to_dn:
+            head = [common.ConvBlock(in_channels + noise_channels, channels, 3,
+                                     act=act, bias=True)]
         else:
-            head = [common.ConvBlock(in_channels, n_feats, 3,
-                                     act_type=act_type, bias=True)]
+            head = [common.ConvBlock(in_channels, channels, 3,
+                                     act=act, bias=True)]
 
-        if block_type.lower() == 'rrdb':
-            resblock = [common.RRDB(n_feats, n_feats, 3,
-                                    1, bias, norm_type, act_type, 0.2)
+        if block.lower() == 'rrdb':
+            resblock = [common.RRDB(channels, channels, 3,
+                                    1, bias, norm, act, 0.2)
                         for _ in range(n_blocks)]
-        elif block_type.lower() == 'res':
-            resblock = [common.ResBlock(n_feats, 3, norm_type, act_type, res_scale=1, bias=bias)
+        elif block.lower() == 'res':
+            resblock = [common.ResBlock(channels, 3, norm, act, res_scale=1, bias=bias)
                         for _ in range(n_blocks)]
         else:
-            raise RuntimeError('block_type is not supported')
+            raise RuntimeError('block is not supported')
 
-        resblock += [common.ConvBlock(n_feats, n_feats, 3, bias=True, act_type=act_type)]
-
+        resblock += [common.ConvBlock(channels, channels, 3, bias=True, act=act)]
         self.backbone = Seq(*head, common.ShortcutBlock(Seq(*resblock)))
-        self.tail = Seq(*[common.ConvBlock(n_feats, out_channels, 3, bias=True, act_type=False)])
+        self.tail = Seq(*[common.ConvBlock(channels, out_channels, 3, bias=True, act=False)])
 
-        if self.use_sr:
-            self.sr = common.Upsampler(scale, n_feats, norm_type, act_type, bias=bias)
+        if self.to_upsample:
+            self.sr = common.Upsampler(scale, channels, norm, act, bias=bias)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -72,7 +77,7 @@ class NET(nn.Module):
 
     def forward(self, x):
         x = self.backbone(x)
-        if self.use_sr:
+        if self.to_upsample:
             x = self.sr(x)
         x = self.tail(x)
         return x

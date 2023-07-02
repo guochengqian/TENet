@@ -13,33 +13,33 @@ def batched_index_select(values, indices):
 ##############################
 #    Basic layer
 ##############################
-def act_layer(act_type, inplace=False, neg_slope=0.25, n_prelu=1):
+def act_layer(act, inplace=False, neg_slope=0.25, n_prelu=1):
     # helper selecting activation
     # neg_slope: for leakyrelu and init of prelu
     # n_prelu: for p_relu num_parameters
-    act_type = act_type.lower()
-    if act_type == 'relu':
+    act = act.lower()
+    if act == 'relu':
         layer = nn.ReLU(inplace)
-    elif act_type == 'leakyrelu':
+    elif act == 'leakyrelu':
         layer = nn.LeakyReLU(neg_slope, inplace)
-    elif act_type == 'prelu':
+    elif act == 'prelu':
         layer = nn.PReLU(num_parameters=n_prelu, init=neg_slope)
-    elif act_type == 'sigmoid':
+    elif act == 'sigmoid':
         layer = nn.Sigmoid()
     else:
-        raise NotImplementedError('activation layer [%s] is not found' % act_type)
+        raise NotImplementedError('activation layer [%s] is not found' % act)
     return layer
 
 
-def norm_layer(norm_type, nc):
+def norm_layer(norm, nc):
     # helper selecting normalization layer
-    norm_type = norm_type.lower()
-    if norm_type == 'batch':
+    norm = norm.lower()
+    if norm == 'batch':
         layer = nn.BatchNorm2d(nc, affine=True)
-    elif norm_type == 'instance':
+    elif norm == 'instance':
         layer = nn.InstanceNorm2d(nc, affine=False)
     else:
-        raise NotImplementedError('normalization layer [%s] is not found' % norm_type)
+        raise NotImplementedError('normalization layer [%s] is not found' % norm)
     return layer
 
 
@@ -52,11 +52,11 @@ def default_conv(in_channelss, out_channels, kernel_size, stride=1, bias=False):
 class ConvBlock(nn.Sequential):
     def __init__(
             self, in_channelss, out_channels, kernel_size=3, stride=1, bias=False,
-            norm_type=False, act_type='relu'):
+            norm=False, act='relu'):
 
         m = [default_conv(in_channelss, out_channels, kernel_size, stride=stride, bias=bias)]
-        act = act_layer(act_type) if act_type else None
-        norm = norm_layer(norm_type, out_channels) if norm_type else None
+        act = act_layer(act) if act else None
+        norm = norm_layer(norm, out_channels) if norm else None
         if norm:
             m.append(norm)
         if act is not None:
@@ -98,17 +98,17 @@ class ShortcutBlock(nn.Module):
 class ResBlock(nn.Module):
     def __init__(
             self, n_feats, kernel_size=3,
-            norm_type=False, act_type='relu', bias=False, res_scale=1,
-            layers=2):
+            bias=False, norm=False, act='relu', res_scale=1,
+            layers=2, last_act=False):
         super(ResBlock, self).__init__()
         m = []
-        act = act_layer(act_type) if act_type else None
-        norm = norm_layer(norm_type, n_feats) if norm_type else None
+        act = act_layer(act) if act else None
+        norm = norm_layer(norm, n_feats) if norm else None
         for i in range(layers):
             m.append(default_conv(n_feats, n_feats, kernel_size, bias=bias))
             if norm:
                 m.append(norm)
-            if i != layers - 1:
+            if i != layers - 1 or last_act:
                 m.append(act)
         self.body = nn.Sequential(*m)
         self.res_scale = res_scale
@@ -127,20 +127,20 @@ class ResidualDenseBlock5(nn.Module):
     """
 
     def __init__(self, nc, gc=32, kernel_size=3, stride=1, bias=True,
-                 norm_type=None, act_type='leakyrelu', res_scale=0.2):
+                 norm=None, act='leakyrelu', res_scale=0.2):
         super(ResidualDenseBlock5, self).__init__()
         # gc: growth channel, i.e. intermediate channels
         self.res_scale = res_scale
-        self.conv1 = ConvBlock(nc, gc, kernel_size, stride, bias=bias, norm_type=norm_type,
-                               act_type=act_type)
-        self.conv2 = ConvBlock(nc + gc, gc, kernel_size, stride, bias=bias, norm_type=norm_type,
-                               act_type=act_type)
-        self.conv3 = ConvBlock(nc + 2 * gc, gc, kernel_size, stride, bias=bias, norm_type=norm_type,
-                               act_type=act_type)
-        self.conv4 = ConvBlock(nc + 3 * gc, gc, kernel_size, stride, bias=bias, norm_type=norm_type,
-                               act_type=act_type)
-        self.conv5 = ConvBlock(nc + 4 * gc, gc, kernel_size, stride, bias=bias, norm_type=norm_type,
-                               act_type=act_type)
+        self.conv1 = ConvBlock(nc, gc, kernel_size, stride, bias=bias, norm=norm,
+                               act=act)
+        self.conv2 = ConvBlock(nc + gc, gc, kernel_size, stride, bias=bias, norm=norm,
+                               act=act)
+        self.conv3 = ConvBlock(nc + 2 * gc, gc, kernel_size, stride, bias=bias, norm=norm,
+                               act=act)
+        self.conv4 = ConvBlock(nc + 3 * gc, gc, kernel_size, stride, bias=bias, norm=norm,
+                               act=act)
+        self.conv5 = ConvBlock(nc + 4 * gc, gc, kernel_size, stride, bias=bias, norm=norm,
+                               act=act)
 
     def forward(self, x):
         x1 = self.conv1(x)
@@ -157,15 +157,15 @@ class RRDB(nn.Module):
     """
 
     def __init__(self, nc, gc=32, kernel_size=3, stride=1, bias=True,
-                 norm_type=None, act_type='leakyrelu', res_scale=0.2):
+                 norm=None, act='leakyrelu', res_scale=0.2):
         super(RRDB, self).__init__()
         self.res_scale = res_scale
         self.RDB1 = ResidualDenseBlock5(nc, gc, kernel_size, stride, bias,
-                                        norm_type, act_type, res_scale)
+                                        norm, act, res_scale)
         self.RDB2 = ResidualDenseBlock5(nc, gc, kernel_size, stride, bias,
-                                        norm_type, act_type, res_scale)
+                                        norm, act, res_scale)
         self.RDB3 = ResidualDenseBlock5(nc, gc, kernel_size, stride, bias,
-                                        norm_type, act_type, res_scale)
+                                        norm, act, res_scale)
 
     def forward(self, x):
         out = self.RDB1(x)
@@ -182,18 +182,18 @@ class SkipUpDownBlock(nn.Module):
     """
 
     def __init__(self, nc, kernel_size=3, stride=1, bias=True,
-                 norm_type=None, act_type='leakyrelu', res_scale=0.2):
+                 norm=None, act='leakyrelu', res_scale=0.2):
         super(SkipUpDownBlock, self).__init__()
         # gc: growth channel, i.e. intermediate channels
         self.res_scale = res_scale
-        self.conv1 = ConvBlock(nc, nc, kernel_size, stride, bias=bias, norm_type=norm_type,
-                               act_type=act_type)
-        self.conv2 = ConvBlock(2 * nc, 2 * nc, kernel_size, stride, bias=bias, norm_type=norm_type,
-                               act_type=act_type)
+        self.conv1 = ConvBlock(nc, nc, kernel_size, stride, bias=bias, norm=norm,
+                               act=act)
+        self.conv2 = ConvBlock(2 * nc, 2 * nc, kernel_size, stride, bias=bias, norm=norm,
+                               act=act)
         self.up = nn.PixelShuffle(2)
         self.pool = nn.MaxPool2d(2)
-        self.conv3 = ConvBlock(nc, nc, kernel_size, stride, bias=bias, norm_type=norm_type,
-                               act_type=act_type)
+        self.conv3 = ConvBlock(nc, nc, kernel_size, stride, bias=bias, norm=norm,
+                               act=act)
 
     def forward(self, x):
         x1 = self.conv1(x)
@@ -209,15 +209,15 @@ class DUDB(nn.Module):
     """
 
     def __init__(self, nc, kernel_size=3, stride=1, bias=True,
-                 norm_type=None, act_type='leakyrelu', res_scale=0.2):
+                 norm=None, act='leakyrelu', res_scale=0.2):
         super(DUDB, self).__init__()
         self.res_scale = res_scale
         self.UDB1 = SkipUpDownBlock(nc, kernel_size, stride, bias,
-                                    norm_type, act_type, res_scale)
+                                    norm, act, res_scale)
         self.UDB2 = SkipUpDownBlock(nc, kernel_size, stride, bias,
-                                    norm_type, act_type, res_scale)
+                                    norm, act, res_scale)
         self.UDB3 = SkipUpDownBlock(nc, kernel_size, stride, bias,
-                                    norm_type, act_type, res_scale)
+                                    norm, act, res_scale)
 
     def forward(self, x):
         return self.UDB3(self.UDB2(self.UDB1(x))).mul(self.res_scale) + x
@@ -266,7 +266,7 @@ class CALayer(nn.Module):
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
 
         self.c1 = ConvBlock(channel, channel // reduction, 1, 1)
-        self.c2 = ConvBlock(channel // reduction, channel, 1, 1, act_type='sigmoid')
+        self.c2 = ConvBlock(channel // reduction, channel, 1, 1, act='sigmoid')
 
     def forward(self, x):
         y = self.avg_pool(x)
@@ -380,7 +380,7 @@ class spatial_attn_layer(nn.Module):
     def __init__(self, kernel_size=5):
         super(spatial_attn_layer, self).__init__()
         self.compress = ChannelPool()
-        self.spatial = ConvBlock(2, 1, kernel_size, act_type=None)
+        self.spatial = ConvBlock(2, 1, kernel_size, act=None)
 
     def forward(self, x):
         # import pdb;pdb.set_trace()
@@ -622,9 +622,9 @@ class CALayer(nn.Module):
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         # feature channel downscale and upscale --> channel weight
         self.conv_du = nn.Sequential(
-            nn.Conv2d(channel, channel // reduction, 1, padding=0, bias=True),
+            nn.Conv2d(channel, channel // reduction, 1, padding=0, bias=False),
             nn.ReLU(inplace=True),
-            nn.Conv2d(channel // reduction, channel, 1, padding=0, bias=True),
+            nn.Conv2d(channel // reduction, channel, 1, padding=0, bias=False),
             nn.Sigmoid()
         )
 
@@ -638,7 +638,7 @@ class CALayer(nn.Module):
 class RCAB(nn.Module):
     def __init__(
             self, n_feat, kernel_size, reduction,
-            bias=True, bn=False, act=nn.ReLU(True), res_scale=1):
+            bias=True, bn=False, act=nn.ReLU(True), res_scale=0.1):
 
         super(RCAB, self).__init__()
         modules_body = []
@@ -651,26 +651,24 @@ class RCAB(nn.Module):
         self.res_scale = res_scale
 
     def forward(self, x):
-        res = self.body(x)
-        res += x
-        return res
+        res = self.body(x) * self.res_scale
+        return res + x
 
 
 # Residual Group (RG)
-class RCABGroup(nn.Module):
-    # 20 does not work.
-    def __init__(self, n_feat, kernel_size=3, reduction=16, n_resblocks=20):
-        super(RCABGroup, self).__init__()
+class RG(nn.Module):
+    def __init__(self, n_feat, kernel_size=3, reduction=16, n_RCAB=15):
+        # we use 10, it gives better results
+        super().__init__()
         modules_body = [
             RCAB(
                 n_feat, kernel_size, reduction, bias=True, bn=False, act=nn.ReLU(True), res_scale=1) \
-            for _ in range(n_resblocks)]
+            for _ in range(n_RCAB)]
         modules_body.append(default_conv(n_feat, n_feat, kernel_size))
         self.body = nn.Sequential(*modules_body)
 
     def forward(self, x):
-        res = self.body(x)
-        res += x
+        res = self.body(x) + x
         return res
 
 
@@ -694,11 +692,11 @@ class SAM(nn.Module):
 
 #  Upsamler layer
 class Upsampler(nn.Sequential):
-    def __init__(self, scale, n_feats, norm_type=False, act_type='relu', bias=False):
+    def __init__(self, scale, n_feats, norm=False, act='relu', bias=False):
 
         m = []
-        act = act_layer(act_type) if act_type else None
-        norm = norm_layer(norm_type, n_feats) if norm_type else None
+        act = act_layer(act) if act else None
+        norm = norm_layer(norm, n_feats) if norm else None
         if (scale & (scale - 1)) == 0:  # Is scale = 2^n?
             for _ in range(int(math.log(scale, 2))):
                 m.append(default_conv(n_feats, 4 * n_feats, 3, bias=bias))
@@ -719,11 +717,11 @@ class Upsampler(nn.Sequential):
 
 #  Upsamler layer
 class UpsamplerSmall(nn.Sequential):
-    def __init__(self, scale, n_feats, norm_type=False, act_type='relu', bias=False):
+    def __init__(self, scale, n_feats, norm=False, act='relu', bias=False):
 
         m = []
-        act = act_layer(act_type) if act_type else None
-        norm = norm_layer(norm_type, n_feats) if norm_type else None
+        act = act_layer(act) if act else None
+        norm = norm_layer(norm, n_feats) if norm else None
         if (scale & (scale - 1)) == 0:  # Is scale = 2^n?
             for _ in range(int(math.log(scale, 2))):
                 m.append(nn.PixelShuffle(2))

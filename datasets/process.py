@@ -148,18 +148,21 @@ def metadata2tensor(metadata):
     return cam2rgb.squeeze(), red_gain.squeeze().unsqueeze(0), blue_gain.squeeze().unsqueeze(0)
 
 
-def raw2srgb(bayer_images, red_gains, blue_gains, cam2rgbs):
+def raw2srgb(bayer_images, red_gains=None, blue_gains=None, cam2rgbs=None):
     """Processes a batch of Bayer RGGB images into sRGB images."""
-    # White balance.
-    bayer_images = apply_gains_bayer(bayer_images, red_gains, blue_gains)
-    # Demosaic.
+    if red_gains is not None:
+        # White balance.
+        bayer_images = apply_gains_bayer(bayer_images, red_gains, blue_gains)
+        # Demosaic.
     bayer_images = torch.clamp(bayer_images, min=0.0, max=1.0)
     images = demosaic(bayer_images)
-    # Color correction.
-    images = apply_ccms(images, cam2rgbs)
-    # Gamma compression.
-    images = torch.clamp(images, min=0.0, max=1.0)
-    images = gamma_compression(images)
+    
+    if cam2rgbs is not None:
+        # Color correction.
+        images = apply_ccms(images, cam2rgbs)
+        # Gamma compression.
+        images = torch.clamp(images, min=0.0, max=1.0)
+        images = gamma_compression(images)
     return images
 
 

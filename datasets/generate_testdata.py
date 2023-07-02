@@ -11,7 +11,7 @@ from datasets import process
 import h5py
 from glob import glob
 from model.common import raw_unpack, raw_pack
-from TorchTools.DataTools.FileTools import save_image_tensor2cv2
+from TorchTools.DataTools.FileTools import save_tensor_to_cv2img
 
 
 color1 = [[1.087177634, -0.4568284452, -0.1467799544], [-0.4628916085, 1.416070819, 0.2814568579],
@@ -100,7 +100,7 @@ def save_image_raw(src_path,
 
     ccm, red_g, blue_g = process.metadata2tensor(metadata)
     srgb = process.rgb2srgb(linrgb, red_g, blue_g, ccm)
-    save_image_tensor2cv2(srgb, osp.join(img_save_dir, root_name + 'srgb.jpg'))
+    save_tensor_to_cv2img(srgb, osp.join(img_save_dir, root_name + 'srgb.jpg'))
 
 
 def main(src_dir,

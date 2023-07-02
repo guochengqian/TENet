@@ -4,7 +4,7 @@ import numpy as np
 import importlib
 import torch
 
-from TorchTools.DataTools.FileTools import save_image_tensor2cv2
+from TorchTools.DataTools.FileTools import save_tensor_to_cv2img
 from TorchTools.ArgsTools.pipe_args import BaseArgs
 from TorchTools.model_util import load_pretrained_models
 from datasets import process
@@ -118,7 +118,7 @@ def main():
             # print(f"processed h_index: {i_h} w_index: {i_w}")
     file_name = os.path.basename(args.test_data).split('.')[0]
     save_name = f'{file_name}-{os.path.basename(args.pretrain)}.png'
-    save_image_tensor2cv2(img_out, os.path.join(args.save_dir, save_name))
+    save_tensor_to_cv2img(img_out, os.path.join(args.save_dir, save_name))
 
 
 if __name__ == '__main__':

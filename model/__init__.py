@@ -1,1 +1,2 @@
-# add _init__.py, so the folder is viewed as package
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '../'))

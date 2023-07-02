@@ -11,8 +11,8 @@ class NonLocalSparseAttention(nn.Module):
         self.n_hashes = n_hashes
         self.reduction = reduction
         self.res_scale = res_scale
-        self.conv_match = common.ConvBlock(channels, channels//reduction, k_size, act_type=False)
-        self.conv_assembly = common.ConvBlock(channels, channels, 1, act_type=False)
+        self.conv_match = common.ConvBlock(channels, channels//reduction, k_size, act=False)
+        self.conv_assembly = common.ConvBlock(channels, channels, 1, act=False)
 
     def LSH(self, hash_buckets, x):
         #x: [N,H*W,C]
@@ -119,9 +119,9 @@ class NonLocalAttention(nn.Module):
     def __init__(self, channel=128, reduction=2, res_scale=1):
         super(NonLocalAttention, self).__init__()
         self.res_scale = res_scale
-        self.conv_match1 = common.ConvBlock(channel, channel//reduction, 1, act_type='prelu')
-        self.conv_match2 = common.ConvBlock(channel, channel//reduction, 1, act_type='prelu')
-        self.conv_assembly = common.ConvBlock(channel, channel, 1, act_type='prelu')
+        self.conv_match1 = common.ConvBlock(channel, channel//reduction, 1, act='prelu')
+        self.conv_match2 = common.ConvBlock(channel, channel//reduction, 1, act='prelu')
+        self.conv_assembly = common.ConvBlock(channel, channel, 1, act='prelu')
         
     def forward(self, input):
         x_embed_1 = self.conv_match1(input)

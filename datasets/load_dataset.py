@@ -14,7 +14,7 @@ from datasets.unprocess import mosaic
 from tqdm import tqdm
 
 
-class LoadPixelShiftData(data.Dataset):
+class PixelShift(data.Dataset):
     """
     load training simulated datasets
     """
@@ -28,7 +28,7 @@ class LoadPixelShiftData(data.Dataset):
                  mid_type='raw',  # or None
                  out_type='rgb',
                  bit=14):
-        super(LoadPixelShiftData, self).__init__()
+        super().__init__()
         self.phase = phase
         self.scale = scale
         self.patch_size = patch_size
@@ -122,19 +122,12 @@ class LoadPixelShiftData(data.Dataset):
                     data.update({'noisy_linrgb': noisy_linrgb.clone(), 'variance': variance.clone()})
 
         # Here return the data we need
-        in_data = {self.in_type: data[self.in_type]}
-        in_data.update({self.out_type: data[self.out_type]})
-        if 'noisy' in self.in_type:
-            in_data.update({'variance': data['variance']})
-        if self.mid_type is not None:
-            in_data.update({self.mid_type: data[self.mid_type]})
         if self.phase != 'train':
-            in_data.update({'metadata': metadata})
-        del data
-        return in_data
+            data.update({'metadata': metadata})
+        return data
 
 
-class LoadSimData(data.Dataset):
+class GaussianNoiseImages(data.Dataset):
     """
     load training simulated datasets
     """
@@ -147,8 +140,9 @@ class LoadSimData(data.Dataset):
                  in_type='noisy_lr_raw',
                  mid_type='raw',  # or None
                  out_type='rgb',
+                 sigma=10,
                  ):
-        super(LoadSimData, self).__init__()
+        super().__init__()
         self.phase = phase
         self.scale = scale
         self.patch_size = patch_size
@@ -157,6 +151,7 @@ class LoadSimData(data.Dataset):
         self.in_type = in_type
         self.mid_type = mid_type
         self.out_type = out_type
+        self.sigma = sigma / 255.
 
         # read image list from txt
         self.data_lists = []
@@ -207,41 +202,31 @@ class LoadSimData(data.Dataset):
                 data.update({'lr_raw': lr_raw.clone()})
 
         if 'noisy' in self.in_type:
-            shot_noise, read_noise = unprocess.random_noise_levels()
             if 'raw' in self.in_type:  # add noise to the bayer raw image and denoise it
                 if 'lr' in self.in_type:
                     # Approximation of variance is calculated using noisy image (rather than clean
                     # image), since that is what will be avaiable during evaluation.
-                    noisy_lr_raw = unprocess.add_noise(lr_raw, shot_noise, read_noise)
-                    variance = shot_noise * noisy_lr_raw + read_noise
+                    noisy_lr_raw = lr_raw + torch.randn(lr_raw.size()).mul_(self.sigma)
+                    variance = torch.ones(lr_raw[0:1].size()).mul_(self.sigma)
                     data.update({'noisy_lr_raw': noisy_lr_raw.clone(), 'variance': variance.clone()})
                 else:
-                    noisy_raw = unprocess.add_noise(raw, shot_noise, read_noise)
-                    variance = shot_noise * noisy_raw + read_noise
+                    noisy_raw = raw + torch.randn(raw.size()).mul_(self.sigma)
+                    variance = torch.ones(raw[0:1].size()).mul_(self.sigma) 
                     data.update({'noisy_raw': noisy_raw.clone(), 'variance': variance.clone()})
 
             elif 'rgb' in self.in_type:
                 if 'lr' in self.in_type:
-                    noisy_lr_rgb = unprocess.add_noise(lr_rgb, shot_noise, read_noise)
-                    variance = shot_noise * noisy_lr_rgb + read_noise
+                    noisy_lr_rgb = lr_rgb + torch.randn(lr_rgb.size()).mul_(self.sigma)
+                    variance = torch.ones(lr_rgb[0:1].size()).mul_(self.sigma) 
                     data.update({'noisy_lr_rgb': noisy_lr_rgb.clone(), 'variance': variance.clone()})
                 else:
-                    noisy_rgb = unprocess.add_noise(rgb, shot_noise, read_noise)
-                    variance = shot_noise * noisy_rgb + read_noise
+                    noisy_rgb = rgb + torch.randn(rgb.size()).mul_(self.sigma)
+                    variance = torch.ones(rgb[0:1].size()).mul_(self.sigma) 
                     data.update({'noisy_rgb': noisy_rgb.clone(), 'variance': variance.clone()})
-
-        # Here return the data we need
-        in_data = {self.in_type: data[self.in_type]}
-        in_data.update({self.out_type: data[self.out_type]})
-        if self.mid_type is not None:
-            in_data.update({self.mid_type: data[self.mid_type]})
-        if 'noisy' in self.in_type:
-            in_data.update({'variance': variance})
-        del data
-        return in_data
+        return data
 
 
-class LoadSimDataUnproc(data.Dataset):
+class GaussianPossionNoiseImages(data.Dataset):
     """
     load training simulated datasets
     """
@@ -255,7 +240,7 @@ class LoadSimDataUnproc(data.Dataset):
                  mid_type='raw',  # or None
                  out_type='rgb',
                  ):
-        super(LoadSimDataUnproc, self).__init__()
+        super(GaussianPossionNoiseImages, self).__init__()
         self.phase = phase
         self.scale = scale
         self.patch_size = patch_size
@@ -358,15 +343,8 @@ class LoadSimDataUnproc(data.Dataset):
                     data.update({'noisy_srgb': noisy_srgb.clone(), 'variance': variance.clone()})
 
         # Here return the data we need
-        in_data = {self.in_type: data[self.in_type]}
-        in_data.update({self.out_type: data[self.out_type]})
-        if self.mid_type is not None:
-            in_data.update({self.mid_type: data[self.mid_type]})
-        if 'noisy' in self.in_type:
-            in_data.update({'variance': data['variance']})
-        in_data.update({'metadata': metadata})
-        del data
-        return in_data
+        data.update({'metadata': metadata})
+        return data
 
 
 class LoadBenchamrk(data.Dataset):

@@ -54,7 +54,7 @@ class BaseArgs:
         parser.add_argument('--shot_noise', default=0.00, type=float, help='shot_noise')
 
         # train args
-        parser.add_argument('--imgs_per_gpu', default=16, type=int,
+        parser.add_argument('--batch_per_gpu', default=16, type=int,
                             help='batch size per GPU (default:16)')
         parser.add_argument('--n_gpus', default=1, type=int,
                             help='number of GPUs (default:1)')
@@ -77,11 +77,11 @@ class BaseArgs:
         # model args
         parser.add_argument('--model', default='tenet', type=str,
                             help='path to pretrained model (default: tenet)')
-        parser.add_argument('--norm_type', default=None, type=str,
+        parser.add_argument('--norm', default=None, type=str,
                             help='normalization_type(default: do not use BN or IN)')
-        parser.add_argument('--block_type', default='res', type=str,
-                            help='dm_block_type(default: res). res/dudb/rrdb')
-        parser.add_argument('--act_type', default='relu', type=str,
+        parser.add_argument('--block', default='rrdb', type=str,
+                            help='dm_block(default: res). res/dudb/rrdb')
+        parser.add_argument('--act', default='relu', type=str,
                             help='activation layer {relu, prelu, leakyrelu}')
         parser.add_argument('--no_bias', action='store_false', dest='bias',
                             help='do not use bias of layer')
@@ -111,7 +111,7 @@ class BaseArgs:
                             help='path to the test data (dnd dataset)')
         parser.add_argument('--pretrain', default='', type=str,
                             help='path to pretrained model(default: none)')
-        parser.add_argument('--pretrain_dir', default='', type=str,
+        parser.add_argument('--pretrain', default='', type=str,
                             help='path to pretrained model(default: none)')
         parser.add_argument('--intermediate', type=bool, default=False,
                             help='ISP intermediate state')
@@ -131,7 +131,7 @@ class BaseArgs:
         args = parser.parse_args()
 
         args.dataset = args.train_list.split('_')[-1].split('.')[0]
-        args.batch_size = args.imgs_per_gpu * args.n_gpus
+        args.batch_size = args.batch_per_gpu * args.n_gpus
 
         args.pre_jobname = '-'.join([args.pre_in_type, args.mid_type, args.pre_out_type])
         args.jobname = '-'.join([args.in_type, args.mid_type, args.out_type])

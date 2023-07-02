@@ -7,32 +7,39 @@ from torch.utils.data import DataLoader
 from torchvision import utils
 import torchvision.transforms.functional as TF
 import scipy.io as sio
-from TorchTools.ArgsTools.pipe_args import BaseArgs
-from TorchTools.DataTools.FileTools import save_image_tensor2cv2
+from TorchTools.ArgsTools.base_args import BaseArgs
+from TorchTools.DataTools.FileTools import save_tensor_to_cv2img
 from TorchTools.model_util import load_pretrained_models
 from datasets import process
-from datasets.generate_benchmark import LoadBenchmarkPixelShift
+from datasets.generate_benchmark import LoadBenchmarkPixelShift, LoadBenchmark
 from tqdm import tqdm
 
 
 def main():
     # print('===> Loading the network ...')
     module = importlib.import_module("model.{}".format(args.model))
-    model = module.NET(args).to(args.device)
+    model = module.Net(**vars(args)).to(args.device)
 
     # load pre-trained
-    model, _, _ = load_pretrained_models(model, args.pretrain)
+    load_pretrained_models(model, args.pretrain)
 
     # -------------------------------------------------
     # test benchmark dataset
-    test_set = LoadBenchmarkPixelShift(args.test_data,
-                                       args.downsampler, args.scale,
-                                       args.in_type, args.mid_type, args.out_type
-                                       )
+    if 'pixelshift' in args.test_dataset.lower():
+        test_set = LoadBenchmarkPixelShift(args.benchmark_path,
+                                           args.downsampler, args.scale,
+                                           )
+    else:
+        test_set = LoadBenchmark(args.benchmark_path,
+                                 args.downsampler, args.scale,
+                                 noise_model=args.noise_model, sigma=args.sigma
+                                 )
     test_loader = DataLoader(dataset=test_set, num_workers=0, batch_size=1,
                              shuffle=False, pin_memory=True)
-
     model.eval()
+    
+    if not os.path.exists(args.save_dir):
+        os.makedirs(args.save_dir, exist_ok=True)
     with torch.no_grad():
         for i, data in tqdm(enumerate(test_loader)):
             # train, data convert
@@ -74,34 +81,31 @@ def main():
             else:
                 rgb_in = src_img
 
-            save_image_tensor2cv2(rgb_in, os.path.join(args.save_dir, '%03d_input.png' % (i + 1)))
-            save_image_tensor2cv2(rgb_out, os.path.join(args.save_dir, '%03d_output.png' % (i + 1)))
-
-            # utils.save_image(rgb_in, os.path.join(args.save_dir, '%03d_input.png' % (i + 1)))
-            # utils.save_image(rgb_out, os.path.join(args.save_dir, '%03d_output.png' % (i + 1)))
-
+            save_tensor_to_cv2img(rgb_in, os.path.join(args.save_dir, '%03d_input.png' % (i + 1)))
+            save_tensor_to_cv2img(rgb_out, os.path.join(args.save_dir, '%03d_output.png' % (i + 1)))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='PyTorch implementation of ISP-Net')
     args = BaseArgs(parser).args
-    args.pre_dir = os.path.join(args.save_dir, "result-{}".format(args.pre_jobname))
+    args.pre_dir = os.path.join(args.save_dir, "result-{}".format(args.pre_pipename))
     if args.intermediate:
         print("===> loading input data from results of : ", args.pre_dir)
     else:
-        print("===> loading input data from  of : ", args.test_data)
+        print("===> loading input data from  of : ", args.benchmark_path)
 
     # parse the desired pre-trained model from candidates
-    print(f"===> try to find the pre-trained ckpt for {args.jobname}")
+    print(f"===> try to find the pre-trained ckpt for {args.expprefix} in folder {args.pretrain}")
     path_file = None
-    for root, dirs, files in os.walk(args.pretrain_dir):
+    for root, dirs, files in os.walk(args.pretrain):
         for file in files:
-            if file.startswith(args.jobname) and f'SR{args.scale}' in file and file.endswith("checkpoint_best.pth"):
+            if file.startswith(args.pipename) and file.endswith("checkpoint_best.pth") and not ('lr' in args.in_type and f'SR{args.scale}' not in file):
                 path_file = os.path.join(root, file)
     assert path_file is not None, "cannot find a checkpoint file"
     args.pretrain = path_file
     print(f"===> load pre-trained ckpt {args.pretrain}")
 
-    args.save_dir = os.path.join(args.save_dir, "result-{}".format(args.jobname))
+    print(args.save_dir)
+    args.save_dir = os.path.join(args.save_dir, "result-{}".format(args.pipename))
     pathlib.Path(args.save_dir).mkdir(parents=True, exist_ok=True)
     print("===> save results to : ", args.save_dir)
     main()

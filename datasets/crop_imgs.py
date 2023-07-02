@@ -15,7 +15,6 @@ def main():
     parser.add_argument('--save_dir', type=str,
                         default='../data/DIV2K/DIV2K_train_HR_sub',
                         help='path to output folder')
-
     parser.add_argument('--cont_var', type=float, default=0.,
                         help='content threshold for keeping or throwing a patch')
     parser.add_argument('--freq_var', type=float, default=0.,
@@ -32,7 +31,6 @@ def main():
                         default=48)
     parser.add_argument('--n_thread', type=int, help='cpu_threads',
                         default=30)
-
     args = parser.parse_args()
 
     ext = 'png'

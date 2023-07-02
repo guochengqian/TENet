@@ -9,33 +9,37 @@ Rethinking the pipeline
 '''
 
 
-class NET(nn.Module):
-    def __init__(self, opt):
-        super(NET, self).__init__()
-        assert 'raw' in opt.in_type and 'rgb' in opt.out_type
-
-        n_blocks = opt.n_blocks
-        n_feats = opt.channels
-
-        denoise = 'noisy' in opt.in_type
-        block_type = opt.block_type
-        norm_type = opt.norm_type
-        act_type = opt.act_type
-        bias = opt.bias
-
-        self.mid_type = opt.mid_type
-        self.output_mid = opt.output_mid
+class Net(nn.Module):
+    def __init__(self,
+                 in_type: str = 'noisy_lr_raw',
+                 mid_type: str = ['lr_raw', 'raw'], 
+                 out_type: str = 'linrgb',
+                 scale: int = 2,
+                 output_mid: bool = False,
+                 block: str = 'rrdb',
+                 n_blocks: int = 12,
+                 channels: int = 64,
+                 noise_channels: int = 1,
+                 norm=None,
+                 act: str = 'relu',
+                 **kwargs):
+        super(Net, self).__init__()
+        bias = True if (norm is None or not norm) else False
+        denoise = 'noisy' in in_type
+        n_blocks = n_blocks // 2
+        self.mid_type = mid_type
+        self.output_mid = output_mid
         if self.mid_type is None or ('raw' in self.mid_type and 'lr' not in self.mid_type):  # Default, DN -> SR -> DM
-            scale1 = opt.scale
+            scale1 = scale
             scale2 = 2
             channel1 = 4
         elif 'lr_raw' in self.mid_type:
             scale1 = 1
-            scale2 = 2*opt.scale
+            scale2 = 2*scale
             channel1 = 4
         else:  # DN -> DM -> SR
             scale1 = 2
-            scale2 = opt.scale
+            scale2 = scale
             channel1 = 3
 
         # input sensor raw bayer image with noise, shape: (1 x H x W).
@@ -45,80 +49,79 @@ class NET(nn.Module):
         #   Thus, the input shape: shape (5 x H/2 x W/2).
 
         # First step, joint Denoising + Super-resolution, output shape: (4 x H x W).
-        noisy_channel = 4 if 'raw' in opt.in_type else 3
         if denoise:
-            m_head = [common.ConvBlock(4 + noisy_channel, n_feats, 3,
-                                       act_type=None, bias=True)]
+            m_head = [common.ConvBlock(4 + noise_channels, channels, 3,
+                                       act=None, bias=True)]
         else:
-            m_head = [common.ConvBlock(4, n_feats, 3,
-                                       act_type=None, bias=True)]
+            m_head = [common.ConvBlock(4, channels, 3,
+                                       act=None, bias=True)]
 
-        if block_type.lower() == 'rrdb':
-            m_resblock1 = [common.RRDB(n_feats, n_feats, 3,
-                                       1, bias, norm_type, act_type, 0.2)
+        if block.lower() == 'rrdb':
+            m_resblock1 = [common.RRDB(channels, channels, 3,
+                                       1, bias, norm, act, 0.2)
                            for _ in range(n_blocks)]
-            m_resblock2 = [common.RRDB(n_feats, n_feats, 3,
-                                       1, bias, norm_type, act_type, 0.2)
+            m_resblock2 = [common.RRDB(channels, channels, 3,
+                                       1, bias, norm, act, 0.2)
                            for _ in range(n_blocks)]
-        elif block_type.lower() == 'dudb':
-            m_resblock1 = [common.DUDB(n_feats, 3, 1, bias,
-                                       norm_type, act_type, 0.2)
+        elif block.lower() == 'dudb':
+            m_resblock1 = [common.DUDB(channels, 3, 1, bias,
+                                       norm, act, 0.2)
                            for _ in range(n_blocks)]
-            m_resblock2 = [common.DUDB(n_feats, 3, 1, bias,
-                                       norm_type, act_type, 0.2)
+            m_resblock2 = [common.DUDB(channels, 3, 1, bias,
+                                       norm, act, 0.2)
                            for _ in range(n_blocks)]
-        elif block_type.lower() == 'res':
-            m_resblock1 = [common.ResBlock(n_feats, 3, norm_type,
-                                           act_type, res_scale=1, bias=bias)
+        elif block.lower() == 'res':
+            m_resblock1 = [common.ResBlock(channels, 3, norm,
+                                           act, res_scale=1, bias=bias)
                            for _ in range(n_blocks)]
-            m_resblock2 = [common.ResBlock(n_feats, 3, norm_type,
-                                           act_type, res_scale=1, bias=bias)
-                           for _ in range(n_blocks)]
-
-        elif block_type.lower() == 'eam':
-            m_resblock1 = [common.EAMBlock(n_feats, n_feats)
-                           for _ in range(n_blocks)]
-            m_resblock2 = [common.EAMBlock(n_feats, n_feats)
+            m_resblock2 = [common.ResBlock(channels, 3, norm,
+                                           act, res_scale=1, bias=bias)
                            for _ in range(n_blocks)]
 
-        elif block_type.lower() == 'drlm':
-            m_resblock1 = [common.DRLM(n_feats, n_feats)
+        elif block.lower() == 'eam':
+            m_resblock1 = [common.EAMBlock(channels, channels)
                            for _ in range(n_blocks)]
-            m_resblock2 = [common.DRLM(n_feats, n_feats)
-                           for _ in range(n_blocks)]
-
-        elif block_type.lower() == 'rrg':
-            m_resblock1 = [common.RRG(n_feats)
-                           for _ in range(n_blocks)]
-            m_resblock2 = [common.RRG(n_feats)
+            m_resblock2 = [common.EAMBlock(channels, channels)
                            for _ in range(n_blocks)]
 
-        elif block_type.lower() == 'rcab':
-            m_resblock1 = [common.RCABGroup(n_feats)
+        elif block.lower() == 'drlm':
+            m_resblock1 = [common.DRLM(channels, channels)
                            for _ in range(n_blocks)]
-            m_resblock2 = [common.RCABGroup(n_feats)
+            m_resblock2 = [common.DRLM(channels, channels)
                            for _ in range(n_blocks)]
 
-        elif block_type.lower() == 'nlsa':
-            m_resblock1 = [common.ResBlock(n_feats, 3, norm_type,
-                                           act_type, res_scale=1, bias=bias)
+        elif block.lower() == 'rrg':
+            m_resblock1 = [common.RRG(channels)
                            for _ in range(n_blocks)]
-            m_resblock1.append(attention.NonLocalSparseAttention(channels=n_feats))
-            m_resblock2 = [common.ResBlock(n_feats, 3, norm_type,
-                                           act_type, res_scale=1, bias=bias)
+            m_resblock2 = [common.RRG(channels)
                            for _ in range(n_blocks)]
-            m_resblock2.append(attention.NonLocalSparseAttention(channels=n_feats))
+
+        elif block.lower() == 'rcab':
+            m_resblock1 = [common.RCABGroup(channels)
+                           for _ in range(n_blocks)]
+            m_resblock2 = [common.RCABGroup(channels)
+                           for _ in range(n_blocks)]
+
+        elif block.lower() == 'nlsa':
+            m_resblock1 = [common.ResBlock(channels, 3, norm=norm,
+                                           act=act, bias=bias)
+                           for _ in range(n_blocks)]
+            m_resblock1.append(attention.NonLocalSparseAttention(channels=channels))
+            m_resblock2 = [common.ResBlock(channels, 3, norm=norm,
+                                           act=act, bias=bias)
+                           for _ in range(n_blocks)]
+            m_resblock2.append(attention.NonLocalSparseAttention(channels=channels))
         else:
-            raise RuntimeError('block_type :{} is not supported'.format(block_type))
+            raise RuntimeError('block :{} is not supported'.format(block))
 
         # super-resolution module (using pixelshuffle layer). output: (4 x H x W)
-        m_resblock1_up = [common.Upsampler(scale1, n_feats, norm_type, act_type, bias=bias)]
-        m_resblock2_up = [common.Upsampler(scale2, n_feats, norm_type, act_type, bias=bias)]
+        m_resblock1_up = [common.Upsampler(scale1, channels, norm, act, bias=bias)]
+        m_resblock2_up = [common.Upsampler(scale2, channels, norm, act, bias=bias)]
 
         # branch for sr_raw output. From 4-channels R-G-G-B images with shape (4 x H x W)
         # to sensor raw bayer image(1x 4H x 4W)
-        m_branch1 = [common.ConvBlock(n_feats, channel1, 3, act_type=False, bias=True)]
-        m_branch2 = [common.ConvBlock(n_feats, 3, 3, act_type=False, bias=True)]
+        m_branch1 = [common.ConvBlock(channels, channel1, 3, act=False, bias=True)]
+        m_branch2 = [common.ConvBlock(channels, 3, 3, act=False, bias=True)]
 
         self.stage1 = nn.Sequential(*m_head, common.ShortcutBlock(nn.Sequential(*m_resblock1)), *m_resblock1_up)
         self.mid_branch = nn.Sequential(*m_branch1)
@@ -139,31 +142,6 @@ class NET(nn.Module):
                 if m.bias is not None:
                     m.bias.data.zero_()
                     m.bias.requires_grad = True
-
-    def load_state_dict_from_other_pipeline(self, pretrain_other):
-        ckpt_other = torch.load(pretrain_other)['state_dict']
-        model_dict = self.state_dict()
-
-        # rename ckpt (avoid name is not same because of multi-gpus)
-        is_model_multi_gpus = True if list(model_dict)[0].split('.')[0] == 'module' else False
-        is_ckpt_multi_gpus = True if list(ckpt_other)[0].split('.')[0] == 'module' else False
-
-        if not (is_model_multi_gpus == is_ckpt_multi_gpus):
-            temp_dict = OrderedDict()
-            for k, v in ckpt_other.items():
-                if is_ckpt_multi_gpus:
-                    name = k[7:]  # remove 'module.'
-                else:
-                    name = 'module.' + k  # add 'module'
-                temp_dict[name] = v
-            ckpt_other = temp_dict
-
-        # 1. filter out unnecessary keys
-        pretrained_state = {k: v for k, v in ckpt_other.items() if
-                            k in model_dict and v.size() == model_dict[k].size()}
-        # 2. overwrite entries in the existing state dict
-        model_dict.update(pretrained_state)
-        self.load_state_dict(model_dict)
 
     def forward(self, x):
         out_stage1 = self.stage1(x)

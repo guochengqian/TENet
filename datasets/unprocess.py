@@ -90,6 +90,7 @@ def apply_ccm(image, ccm):
     return out
 
 
+# todo: can make it compact
 def safe_invert_gains(image, rgb_gain, red_gain, blue_gain):
     """Inverts gains while safely handling saturated pixels."""
     image = image.permute(1, 2, 0)  # Permute the image tensor to HxWxC format from CxHxW format
@@ -205,3 +206,4 @@ def add_noise(image, shot_noise=0.01, read_noise=0.0005):
     noise = n.sample()
     out = image + noise
     return out
+

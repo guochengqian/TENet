@@ -4,10 +4,10 @@ tic
 
 %%
 % div2k 
-% pretrain_dataset = 'pixelshift'; 
-% dataset = 'pixelshift'; 
-pretrain_dataset = 'div2k'; 
-dataset = 'urban100'; 
+pretrain_dataset = 'pixelshift'; 
+dataset = 'pixelshift'; 
+% pretrain_dataset = 'div2k'; 
+% dataset = 'urban100'; 
 % dataset = 'cbsd68'; 
 % dataset = 'set14'; 
 % dataset = 'div2k'; 
@@ -20,7 +20,9 @@ dataset = 'urban100';
 
 
 % % tasks = {'resnet-dn+dm+sr-SR2', 'resnet-dn+sr-dm-SR2'}; 
-tasks = {'e2e-dn+dm+sr-SR2', 'e2e-dn+sr-dm-SR2'}; 
+% tasks = {'e2e-dn+dm+sr-SR2', 'e2e-dn+sr-dm-SR2'}; 
+% tasks = {'e2e-dn+sr-dm-SR2'}; 
+tasks = {'e2e-dn-sr-dm-SR2'}; 
 
 gt_path = fullfile('/home/qiang/codefiles/low_level/ISP/ispnet/data/benchmark/', dataset, 'gt');
 pred_dir = fullfile(fullfile('/home/qiang/codefiles/low_level/ISP/ispnet/pretrain/', pretrain_dataset, 'pipeline'), ['result_', dataset]);

@@ -149,11 +149,11 @@ if __name__ == '__main__':
         print("===> loading input data from results of : ", args.pre_dir)
 
     path_file = None
-    for root, dirs, files in os.walk(args.pretrain_dir):
+    for root, dirs, files in os.walk(args.pretrain):
         for file in files:
             if file.startswith(args.jobname) and file.endswith("checkpoint_best.pth"):
                 path_file = os.path.join(root, file)
-    assert path_file is not None, "cannot find a checkpoint file for {} in {}".format(args.jobname, args.pretrain_dir)
+    assert path_file is not None, "cannot find a checkpoint file for {} in {}".format(args.jobname, args.pretrain)
     args.pretrain = path_file
 
     args.save_dir = os.path.join(args.save_dir, "result-{}".format(args.jobname))
