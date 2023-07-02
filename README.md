@@ -1,6 +1,6 @@
-# TENet <a href="https://arxiv.org/abs/1905.02538" target="_blank">[PDF]</a> <a href="http://gcqian.com/project/pixelshift200">[pixelshift200]</a> 
+# TENet <a href="https://arxiv.org/abs/1905.02538" target="_blank">[ArXiv]</a> <a href="http://gcqian.com/project/pixelshift200">[pixelshift200]</a> 
 
-### Rethink the Pipeline of Demosaicking, Denoising, and Super-resolution
+### Rethinking Learning-based Demosaicing, Denoising, and Super-Resolution Pipeline
 By [Guocheng Qian*](https://guochengqian.github.io/), [Yuanhao Wang*](https://github.com/yuanhaowang1213), [Jinjin Gu](http://www.jasongt.com/), Chao Dong, Wolfgang Heidrich, Bernard Ghanem, [Jimmy S. Ren](http://www.jimmyren.com/)
 
 The original name of this project is: "Trinity of Pixel Enhancement: a Joint Solution for Demosaicking, Denoising and Super-Resolution"
@@ -50,8 +50,8 @@ conda activate tenet
 
 ### Data preparation
 
-1. synthetic data preparation
-
+1. synthetic data preparation [Optional]
+   Processing synthetic dataset if you are interested in synthetic benchmark.
    1. Download ([DIV2K](https://drive.google.com/file/d/1vXPPr2hVaMewz2JA1lFfI5uHB4ENwRXQ/view?usp=sharing)) dataset
 
    2. `mkdir data && cd data`
@@ -67,14 +67,14 @@ conda activate tenet
       ```
 
 2. PixelShift200 data preparation 
-
+   Processing PixelShift200 dataset if you are interested in PixelShift200 benchmark.
    1. Download [Pixelshift200](http://guochengqian.com/pixelshift200). They are .mat format, having 4 channels (R, Gr, Gb, B). Unzip the .zip file and put all folders inside into one folder called pixelshift200. For example, put here `/data/lowlevel/pixelshift200`. 
 
    2. `cd TENet && mkdir data && cd data`
 
    3. Link PixelShift200 data into ./data/pixelshift200, e.g. `ln -s /data/lowlevel/pixelshift200 pixelshift200` 
 
-   4. Crop images into 512*512, and generate the text file contains the location of each image:
+   4. Crop images into 512*512, and generate the text file that contains the location of each image:
 
       ```bash
       cd ../datasets
@@ -86,16 +86,16 @@ conda activate tenet
 ## Training
 #### Train  joint  models
 
-* DN+DM+SR (end to end without pipeline)
-
-  ```bash
-  python train.py --in_type noisy_lr_raw --mid_type None --out_type linrgb --model tenet --n_gpus 4 --block rrdb --n_blocks 12
-  ```
-
 * DN+SR->DM (our **TENet**)
 
   ```bash
   python train.py --in_type noisy_lr_raw --mid_type raw --out_type linrgb --model tenet --n_gpus 4 --block rrdb  --n_blocks 12
+  ```
+
+* DN+DM+SR [Optional] (baseline: end to end without pipeline)
+
+  ```bash
+  python train.py --in_type noisy_lr_raw --mid_type None --out_type linrgb --model tenet --n_gpus 4 --block rrdb --n_blocks 12
   ```
 
   Note: 
@@ -112,7 +112,7 @@ conda activate tenet
 
 
 
-#### Train sequential models (ablation study) 
+#### Train sequential models [Optional] (ablation study) 
 
 ```bash
 # RawDN
@@ -132,7 +132,9 @@ python train.py --in_type lr_linrgb --out_type linrgb --model resnet --train_lis
 ```
 
 
-### Train SOTA models
+### Train SOTA models [Optional]
+We also support training previous work. 
+
 * JDSR
   ```bash
   python train.py --in_type noisy_lr_raw --mid_type None --out_type linrgb --model jdsr --train_list datasets/train_pixelshift.txt --val_list datasets/val_pixelshift.txt --n_gpus 4  --use_wandb --block res --n_blocks 12 --channels 256
@@ -149,8 +151,9 @@ python train.py --in_type lr_linrgb --out_type linrgb --model resnet --train_lis
 
 ```bash
 bash script_all_pipelines.sh 
-# this script supports evaluation on all benchmarking datasets as well as the real-shot images for all possible pipelines
 ```
+This script supports evaluation on all benchmarking datasets as well as the real-shot images for all possible pipelines. Check this script for details 
+
 
 Note: for the real shot images testing, you have to:
 
@@ -167,14 +170,13 @@ Note: for the real shot images testing, you have to:
 
 ### Citation 
 
-Please cite the following paper if you feel TENet is useful to your research
+Please cite the following paper if you feel TENet and PixelShift200 is useful to your research
 
 ```
-@article{qian2019trinity,
+@article{qian2019rethink,
   title={Rethink the Pipeline of Demosaicking, Denoising, and Super-resolution},
-  author={Qian, Guocheng and Wang, Yuanhao and Dong, Chao and Ren, Jimmy S and Heidrich, Wolfgang and Ghanem, Bernard and Gu, Jinjin},
+  author={Qian, Guocheng and Wang, Yuanhao and Gu, Jinjin and Dong, Chao and  Heidrich, Wolfgang and Ghanem, Bernard and Ren, Jimmy S},
   journal={arXiv preprint arXiv:1905.02538},
   year={2019}
 }
 ```
-

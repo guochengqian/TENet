@@ -68,8 +68,8 @@
 
 ## E2E using SOTA models.
 ### jdsr
-bash script_e2e_compare.sh 2 jdsr-dn+dm+sr noisy_lr_raw None linrgb jdsr rrdb 24 pixelshift pixelshift gp
-bash script_e2e_compare.sh 2 jdsr-dn+sr-dm noisy_lr_raw raw linrgb jdsr rrdb 24 pixelshift pixelshift gp
+# bash script_e2e_compare.sh 2 jdsr-dn+dm+sr noisy_lr_raw None linrgb jdsr rrdb 24 pixelshift pixelshift gp
+# bash script_e2e_compare.sh 2 jdsr-dn+sr-dm noisy_lr_raw raw linrgb jdsr rrdb 24 pixelshift pixelshift gp
 
 ### jdndmsr
 #bash script_e2e_compare.sh 2 jdndmsr-dn+dm+sr noisy_lr_raw None linrgb jdndmsr rrdb 4 pixelshift pixelshift gp
