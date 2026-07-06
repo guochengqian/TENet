@@ -1,0 +1,17 @@
+# Python dependencies for TENet.
+# PyTorch is installed separately (see install.sh) from the CUDA index matching
+# your GPU. For NVIDIA Blackwell (RTX 50-series / RTX 5090, sm_120) use a CUDA
+# 12.8+/PyTorch 2.7+ build. Versions below are floors that work on modern
+# Python (3.10-3.12) and NumPy 2.x.
+numpy>=1.24
+scipy>=1.10
+opencv-python>=4.7
+scikit-image>=0.21
+imageio>=2.28
+Pillow>=9.5
+matplotlib>=3.7
+h5py>=3.9
+easydict>=1.10
+tqdm>=4.64
+rawpy>=0.18
+phasepack>=1.5

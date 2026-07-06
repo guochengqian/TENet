@@ -39,11 +39,25 @@ Download PixelShift200 and the original RAW files from [pxielshift200 website](h
 Clone this github repo and install the environment by:
 
 ```bash
-git clone https://github.com/guochengqian/TENet
+git clone --recurse-submodules https://github.com/guochengqian/TENet
 cd TENet
 source install.sh
-conda activate tenet
+source .venv/bin/activate
 ```
+
+The default `install.sh` targets modern NVIDIA GPUs, **including Blackwell (RTX 50-series / RTX 5090, sm_120)**, using a uv + Python 3.12 environment with PyTorch ≥2.7 built for CUDA 12.8 (`cu128`). TENet has no custom CUDA ops, so no compilation is needed. The legacy CUDA 11.1 / PyTorch 1.10 conda recipe is kept (commented) at the bottom of `install.sh` for older GPUs.
+
+### Pip helper package
+
+Resource metadata and a small info CLI are available on PyPI:
+
+```bash
+pip install tenet_official
+tenet-info            # paper, code, and PixelShift200 dataset links
+tenet-info --models   # list model variants
+```
+
+Training/evaluation still uses this source checkout; `tenet_official` only ships metadata/resource pointers.
 
 
 

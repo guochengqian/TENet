@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tenet_official"
+version = "0.1.0"
+description = "TENet (ICCP'22) release metadata and resource helpers for pip users: paper, PixelShift200 dataset, model list, and pretrained-weight loading info."
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [{ name = "Guocheng Qian" }]
+keywords = ["demosaicing", "denoising", "super-resolution", "ISP", "raw", "pytorch", "TENet", "PixelShift200"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Scientific/Engineering :: Image Processing",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["build>=1", "twine>=4", "pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/guochengqian/TENet"
+Repository = "https://github.com/guochengqian/TENet"
+Paper = "https://arxiv.org/abs/1905.02538"
+Dataset = "http://guochengqian.github.io/project/pixelshift200"
+
+[project.scripts]
+tenet-info = "tenet_official.cli:main"
+
+[tool.setuptools]
+packages = ["tenet_official"]
+zip-safe = false
